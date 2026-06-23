@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.github
+.vercel
+.claude
+.playwright-mcp
+.env.development
+.env.local
+*.local
+docs
+handoff.md
+README.md
+*.md
+docker-compose.yml

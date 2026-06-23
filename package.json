@@ -1,0 +1,35 @@
+{
+  "name": "az-validator",
+  "version": "0.1.0",
+  "description": "AZ validator signer service and CLI",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "bin": {
+    "az-validator": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "dev": "tsx src/cli/index.ts serve --host 0.0.0.0 --port 3001",
+    "start": "node dist/cli/index.js serve",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:live-kms": "vitest run test/live-kms.spec.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-kms": "^3.958.0",
+    "axios": "^1.12.2",
+    "commander": "^14.0.0",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.13.2",
+    "fastify": "^5.6.1",
+    "pino-pretty": "13.1.1",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

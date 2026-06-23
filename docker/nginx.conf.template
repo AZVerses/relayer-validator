@@ -1,0 +1,116 @@
+# nginx config rendered by entrypoint.sh at container start.
+# Only ${APP_PORT}, ${INTERNAL_VALIDATOR_PORT}, and ${NGINX_RESOLVERS}
+# are substituted — all other $vars are nginx-runtime.
+
+# Resolve upstream hostnames per request so transient DNS failures
+# don't crash nginx at startup. The resolver list is filled in by the
+# entrypoint from the container's /etc/resolv.conf so Docker-internal
+# names like host.docker.internal also work; public DNS is appended as
+# a fallback.
+resolver ${NGINX_RESOLVERS} ipv6=off valid=300s;
+resolver_timeout 5s;
+
+server {
+    listen ${APP_PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # ---- Validator API (relayer-facing + admin-facing) ----
+    # /sign is called by the relayer over signed HTTP.
+    # /validator and /health are status reads (also used by the SPA).
+    # /admin/sign-* are the admin-web signing endpoints.
+    location ~ ^/(sign|validator|health)$ {
+        proxy_pass http://127.0.0.1:${INTERNAL_VALIDATOR_PORT}$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 60s;
+    }
+    location ^~ /admin/ {
+        # The admin signing endpoints are reachable from the same APP_PORT
+        # as the public SPA, so we cannot rely on network isolation alone.
+        # basic_auth gates all /admin/* requests; the password is loaded
+        # from ADMIN_BASIC_AUTH_PASSWORD by entrypoint.sh.
+        auth_basic "AZ Validator Admin";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+
+        proxy_pass http://127.0.0.1:${INTERNAL_VALIDATOR_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 60s;
+    }
+
+    # ---- Admin SPA contract: relayer proxy ----
+    # SPA calls /api/chain/{chainId}/<relayer-path>. Fastify forwards to
+    # the global RELAYER_URL; the path keeps chainId for the SPA contract.
+    location ~ ^/api/chain/[0-9]+/(.*)$ {
+        proxy_pass http://127.0.0.1:${INTERNAL_VALIDATOR_PORT}$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 60s;
+    }
+
+    # ---- Admin SPA contract: validator self-proxy ----
+    # SPA calls /validator-svc/chain/{chainId}/<validator-path> → this
+    # same container's fastify (same SPA contract whether deployed
+    # alongside its own validator or pointing at a remote one).
+    location ~ ^/validator-svc/chain/[0-9]+/(.*)$ {
+        proxy_pass http://127.0.0.1:${INTERNAL_VALIDATOR_PORT}/$1$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 60s;
+    }
+
+    # ---- Admin SPA contract: RPC proxy (bypass browser CORS) ----
+    # Fastify selects the chain-specific rpcUrl from CHAIN_CONFIGS.
+    location ~ ^/rpc/chain/[0-9]+$ {
+        proxy_pass http://127.0.0.1:${INTERNAL_VALIDATOR_PORT}$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 30s;
+    }
+
+    # Runtime deployment config changes independently of the hashed SPA
+    # bundle and must never be served from the browser's static asset cache.
+    location = /config.js {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        expires off;
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # ---- Static SPA assets with long cache ----
+    location ~* \.(?:js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$ {
+        expires 7d;
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # ---- SPA fallback — React Router handles client-side routing ----
+    # Last so the proxy locations above take precedence.
+    # Gated by the same basic_auth as /admin/* — without this an attacker
+    # who reached APP_PORT could load the SPA and have the browser fetch
+    # /admin/* with the SPA's origin. The static-assets block above stays
+    # unauthenticated since the bundle is public anyway.
+    location / {
+        auth_basic "AZ Validator Admin";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+        add_header Cache-Control "no-store" always;
+        try_files $uri $uri/ /index.html;
+    }
+}

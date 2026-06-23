@@ -1,0 +1,13 @@
+services:
+  admin-web:
+    container_name: validator-admin
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      CHAIN_CONFIGS: ${CHAIN_CONFIGS}
+      RELAYER_URL: ${RELAYER_URL}
+      VALIDATOR_SERVICE_URL: ${VALIDATOR_SERVICE_URL}
+    ports:
+      - "${HOST_PORT:-8080}:80"
+    restart: unless-stopped

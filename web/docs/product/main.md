@@ -1,0 +1,70 @@
+Web 后台系统
+- 用户系统
+  - 登陆
+    - 登入系统：基于钱包私钥登入，以后可以对接Bot
+    - v1: mail + 2FA
+    - validator 需要绑定钱包地址
+      - v1: 直接超级 admin 指定其某个 validator 用户对应的钱包地址
+  - 权限
+    - 【v2】普通用户
+      - 查看所有后台数据
+    - validator
+      - 修改 pending withdraw 状态：flush / reset hot amount 水位 / pause / unpause  / ...
+      - rebalance发起 / 同意权限
+    - 超级 admin (写死)
+      - 可以设置任何用户权限，onboard 用户的时候，先给用户 email 加白，用户再登陆
+- Chain Assets Overview
+  - 查看所有支持的链上的金库合约概况，包括
+    - Assets 余额 overview
+    - deposits/withdrawals 数量 overview
+    - Active validator sets
+    - 所有的链上多签钱包列表，以及对应权限
+    - ...
+
+以下信息都是按链维度的，用户可以在 dashboard 上方选择某条链 ⬇️👇
+- 查看所有用户出入金信息，包括
+  - 按照不同维度查询
+    - Token
+    - User address
+    - chain ID
+    - 时间范围
+  - Deposits 历史
+    - ID
+    - Amount
+    - Token
+    - User address
+    - Chain ID
+    - timestamp
+    - Transaction Hash：附上 explorer link
+    - 链上 confirm 状态：unconfirmed / confirming / confirmed
+    - Type: wallet 地址入金 / 邮箱地址入金
+  - Withdraw 历史
+    - ID
+    - Amount
+    - Token 
+    - User address
+    - chain id
+    - Fee
+    - pending 状态
+    - pause 状态
+    - Executed 状态
+    - Transaction Hash：附上 explorer link
+    - 链上 confirm 状态：unconfirmed / confirming / confirmed
+    - Challenge 过期时间
+- 查看合约的全局信息，包括
+  - 链上合约整体情况
+    - 支持的 Token 列表，challenge period,
+    - 每个 token 的 hot amount 水位
+    - 每个 token 对应的配置：refill rate 等
+    - 每个 token 在合约的 balance
+  - Validators 信息
+    - validator地址
+    - required power, validator power
+- 【Validator权限】控制 withdraw 状态，每一笔 pending 后有快速操作按钮，包括
+  - unexpired + unpaused: 显示 Flush / Pause 文案按钮
+  - unexpired + paused: 只显示 Unpause 文案按钮
+  - expired + unpaused: 只显示 Execute 文案按钮
+  - expired + paused: 只显示 Unpause 文案按钮
+  - Flush pending withdraw: 可以 flush 一个或者多个 unexpired + unpaused withdraw，1个approve即可
+  - Reset hot amount:  可以 reset 一个或者多个 token 的 hot amount 水位，1个approve即可
+  - 可以由任何一个 validator 发起 approve 后，直接调用 admin console 的接口

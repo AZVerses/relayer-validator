@@ -1,0 +1,36 @@
+# DNS resolver so upstream hostnames are resolved per request (not at startup).
+# Prevents nginx from crashing when an upstream is temporarily unreachable.
+resolver 8.8.8.8 1.1.1.1 ipv6=off valid=300s;
+resolver_timeout 5s;
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Runtime deployment config changes independently of the hashed SPA
+    # bundle and must never be served from the browser's static asset cache.
+    location = /config.js {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+        expires off;
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # Cache static assets
+    location ~* \.(?:js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$ {
+        expires 7d;
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # SPA fallback — React Router handles client-side routing
+    location / {
+        add_header Cache-Control "no-store" always;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Generated per-chain from CHAIN_CONFIGS at container start.
+    include /etc/nginx/conf.d/chain-proxies.conf;
+}
