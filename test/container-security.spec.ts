@@ -3,6 +3,18 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 describe('validator runtime container user', () => {
+  it('pins every combined and standalone base image to a digest', () => {
+    for (const dockerfilePath of ['Dockerfile', 'web/Dockerfile']) {
+      const dockerfile = readFileSync(path.join(process.cwd(), dockerfilePath), 'utf8');
+      const fromLines = dockerfile.split('\n').filter(line => line.startsWith('FROM '));
+
+      expect(fromLines.length).toBeGreaterThan(0);
+      for (const line of fromLines) {
+        expect(line).toMatch(/^FROM [^ ]+@sha256:[a-f0-9]{64}(?: AS .+)?$/);
+      }
+    }
+  });
+
   it('runs the final image as node after preparing writable nginx paths', () => {
     const dockerfile = readFileSync(path.join(process.cwd(), 'Dockerfile'), 'utf8');
     const runtimeStage = dockerfile.slice(dockerfile.lastIndexOf('FROM '));

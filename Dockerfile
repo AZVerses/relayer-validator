@@ -6,7 +6,7 @@
 # /admin/* directly on this same origin.
 
 # ===== Stage 1: build the admin SPA =====
-FROM node:20-alpine AS web-builder
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS web-builder
 WORKDIR /web
 
 COPY web/package.json web/package-lock.json ./
@@ -15,7 +15,7 @@ COPY web/ ./
 RUN npm run build
 
 # ===== Stage 2: build the validator service =====
-FROM node:20-alpine AS svc-builder
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS svc-builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -26,7 +26,7 @@ COPY src/ ./src/
 RUN npm run build
 
 # ===== Stage 3: runtime — nginx + node together =====
-FROM node:20-alpine
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
 
 # bash for `wait -n` in the entrypoint; nginx + gettext (envsubst) for
 # the proxy template; apache2-utils for htpasswd (admin basic_auth);

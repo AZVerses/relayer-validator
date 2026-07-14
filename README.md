@@ -69,6 +69,9 @@ Admin SPA and API. HSTS remains the responsibility of the outer HTTPS terminator
 Fastify and Axios are exact-pinned in `package.json`/`package-lock.json`; upgrade them through
 an audited lockfile change rather than relying on a floating semver range at image build time.
 
+Docker base tags are paired with reviewed multi-arch digests for reproducible builds. Refresh
+the digests deliberately when taking Node/Alpine/Nginx security updates; do not leave them frozen.
+
 Mount the relayer's PEM at `CALLER_PEM_PUBLIC_KEY_PATH`. If `CALLER_PEM_PUBLIC_KEY_PATH` is an `https://` URL, the mount is not needed, but `CALLER_PEM_PUBLIC_KEY_SHA256` is required.
 
 Minimal `.env` — copy `.env.example` and fill in:
