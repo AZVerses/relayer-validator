@@ -12,6 +12,8 @@ export interface AppConfig {
   callerPemPublicKeyPath: string;
   callerPemPublicKeySha256?: string;
   cexApiUrl: string;
+  /** Existing Docker Basic Auth password, reused by Fastify admin routes. */
+  adminBasicAuthPassword?: string;
   /**
    * Global relayer base URL used by the admin signing endpoint and admin
    * web proxy (e.g. http://relayer:3000). Optional — admin forwarding
@@ -158,6 +160,7 @@ export function loadConfig(env = process.env): AppConfig {
     callerPemPublicKeyPath,
     callerPemPublicKeySha256,
     cexApiUrl: getRequiredString(env, 'CEX_API_URL'),
+    adminBasicAuthPassword: getOptionalString(env, 'ADMIN_BASIC_AUTH_PASSWORD'),
     relayerUrl: env.RELAYER_URL?.trim() || undefined,
     chainConfigs: parseChainRouteConfigs(env.CHAIN_CONFIGS),
   };

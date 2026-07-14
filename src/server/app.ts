@@ -11,6 +11,7 @@ import {
   signRebalanceRejectBodySchema,
   signWithdrawOperationBodySchema,
 } from '../services/admin/relayer-forwarder';
+import { createAdminAuthenticator } from './admin-auth';
 
 function sha256Prefix(input: string, bytes = 8): string {
   return createHash('sha256').update(input).digest('hex').slice(0, bytes * 2);
@@ -115,6 +116,7 @@ export interface AppDeps {
 }
 
 export async function buildApp({ config, signingService, relayerForwarder }: AppDeps): Promise<FastifyInstance> {
+  const authenticateAdmin = createAdminAuthenticator(config.adminBasicAuthPassword ?? '');
   const app = fastify({
     logger: {
       level: config.logLevel,
@@ -307,7 +309,7 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
     return reply.send(result);
   });
 
-  app.post('/admin/sign-withdraw-operation', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/admin/sign-withdraw-operation', { preHandler: authenticateAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const envelope = signWithdrawOperationBodySchema.safeParse(request.body);
     if (!envelope.success) {
       return reply.status(400).send({ error: 'Invalid request', details: envelope.error.flatten() });
@@ -317,8 +319,14 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
     if (!parsed.success) {
       return reply.status(400).send({ error: 'Invalid request body', details: parsed.error.flatten() });
     }
-    if (parsed.data.action === 'reject-rebalance-collection') {
-      return reply.status(400).send({ error: 'use /admin/sign-rebalance-reject for reject actions' });
+    if (![
+      'batch-flush-withdrawals',
+      'batch-toggle-pending-withdrawal',
+      'execute-pending-withdrawal',
+      'batch-reset-withdraw-hot-amount',
+      'rebalance-withdraw',
+    ].includes(parsed.data.action)) {
+      return reply.status(400).send({ error: `action ${parsed.data.action} is not allowed on admin routes` });
     }
 
     const signRequest = parsed.data as Exclude<SignRequest, { action: 'reject-rebalance-collection' }>;

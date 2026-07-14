@@ -26,7 +26,7 @@ Used only by `docker/entrypoint.sh` and `docker/nginx.conf.template`. Irrelevant
 
 | Variable | Required | Default | Used for |
 |---|---|---|---|
-| `ADMIN_BASIC_AUTH_PASSWORD` | **required (Docker only)** | — | Single shared password protecting the admin SPA root and `/admin/*` endpoints (username hardcoded `admin`). The container fails to start if unset. |
+| `ADMIN_BASIC_AUTH_PASSWORD` | **required when serving HTTP** | — | Single shared password protecting the admin SPA root and `/admin/*` endpoints (username hardcoded `admin`). Both nginx and Fastify enforce it; the server fails to start if unset. |
 | `INTERNAL_VALIDATOR_PORT` | optional | `3010` | Loopback-only port fastify binds inside the container; nginx is the only thing that talks to it. Rarely needs override. |
 
 The entrypoint writes `/etc/nginx/.htpasswd` for basic auth and sets it

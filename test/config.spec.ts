@@ -6,6 +6,7 @@ function baseEnv(overrides: Record<string, string | undefined> = {}) {
     KMS_KEY_ID_VALIDATOR: 'validator-key',
     CALLER_PEM_PUBLIC_KEY_PATH: 'resources/relayer.pem',
     CEX_API_URL: 'https://cex.example.com',
+    ADMIN_BASIC_AUTH_PASSWORD: 'admin-password',
     ...overrides,
   };
 }
@@ -16,6 +17,7 @@ describe('loadConfig', () => {
 
     expect(config.callerPemPublicKeyPath).toBe('resources/relayer.pem');
     expect(config.callerPemPublicKeySha256).toBeUndefined();
+    expect(config.adminBasicAuthPassword).toBe('admin-password');
   });
 
   it('uses AWS default credentials when access key and secret key are both absent', () => {

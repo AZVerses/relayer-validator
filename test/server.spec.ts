@@ -36,6 +36,80 @@ describe('validator HTTP API', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it('rejects unauthenticated withdraw admin requests before signing', async () => {
+    const signSpy = vi.spyOn(SigningService.prototype, 'sign');
+    const response = await app.inject({
+      method: 'POST',
+      url: '/admin/sign-withdraw-operation',
+      payload: {
+        request: {
+          action: 'batch-flush-withdrawals',
+          withdrawalIds: ['1'],
+          chainId: 42161,
+          vaultAddress: '0x1111111111111111111111111111111111111111',
+          nonce: '1',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.headers['www-authenticate']).toContain('Basic');
+    expect(signSpy).not.toHaveBeenCalled();
+    signSpy.mockRestore();
+  });
+
+  it('accepts valid Basic auth on the withdraw admin route', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/admin/sign-withdraw-operation',
+      headers: {
+        authorization: `Basic ${Buffer.from('admin:test-admin-password').toString('base64')}`,
+      },
+      payload: {
+        request: {
+          action: 'batch-flush-withdrawals',
+          withdrawalIds: ['1'],
+          chainId: 42161,
+          vaultAddress: '0x1111111111111111111111111111111111111111',
+          nonce: '1',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ error: 'RELAYER_URL not configured' });
+  });
+
+  it('rejects request-withdraw on the admin route before signing', async () => {
+    const signSpy = vi.spyOn(SigningService.prototype, 'sign');
+    const response = await app.inject({
+      method: 'POST',
+      url: '/admin/sign-withdraw-operation',
+      headers: {
+        authorization: `Basic ${Buffer.from('admin:test-admin-password').toString('base64')}`,
+      },
+      payload: {
+        request: {
+          action: 'request-withdraw',
+          withdrawalId: '1',
+          tokenAddress: '0x1111111111111111111111111111111111111111',
+          amount: '10',
+          fee: '1',
+          receiver: '0x2222222222222222222222222222222222222222',
+          isForcePending: false,
+          chainId: 42161,
+          vaultAddress: '0x3333333333333333333333333333333333333333',
+          nonce: '1',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: 'action request-withdraw is not allowed on admin routes' });
+    expect(signSpy).not.toHaveBeenCalled();
+    signSpy.mockRestore();
+  });
+
   it('returns signed payload for rebalanceWithdraw', async () => {
     const payload = {
       action: 'rebalance-withdraw',
@@ -191,6 +265,7 @@ describe('validator HTTP API', () => {
       KMS_KEY_ID_VALIDATOR: 'validator-key',
       CALLER_PEM_PUBLIC_KEY_PATH: callerKeys.publicKeyPath,
       CEX_API_URL: 'https://cex.example.com',
+      ADMIN_BASIC_AUTH_PASSWORD: 'test-admin-password',
       CHAIN_CONFIGS: JSON.stringify([{ chainId: 42161 }]),
     });
     config.logLevel = 'silent';

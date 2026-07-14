@@ -16,7 +16,7 @@ External signer service used by `az-vault-relayer` for withdraw-related vault ac
 | `GET`  | `/health` | Liveness. |
 | `GET`  | `/validator` | Returns `{ validatorAddress }`. |
 | `POST` | `/sign` | Sign a relayer-issued vault action. Caller must include `x-signature`, `x-timestamp`, `x-nonce` headers. |
-| `POST` | `/admin/sign-withdraw-operation` | Sign + forward a validator-initiated action to the global relayer. Returns 503 if `RELAYER_URL` is not set. |
+| `POST` | `/admin/sign-withdraw-operation` | Basic-authenticated sign + forward for existing-withdrawal admin actions and rebalance. It rejects `request-withdraw`. Returns 503 if `RELAYER_URL` is not set. |
 | `POST` | `/admin/sign-rebalance-reject` | Sign + forward a rebalance reject to the global relayer. Returns 503 if `RELAYER_URL` is not set. |
 
 Supported `/sign` actions: `request-withdraw`, `batch-flush-withdrawals`, `batch-toggle-pending-withdrawal`, `execute-pending-withdrawal`, `batch-reset-withdraw-hot-amount`, `rebalance-withdraw`, `reject-rebalance-collection`.
@@ -38,7 +38,7 @@ below is just enough to get the container booting:
 | `CEX_API_URL` | yes | CEX risk service base URL; `/sign` hits `${CEX_API_URL}/az/api/relayer/withdraw/verify?requestId=<id>`. |
 | `AWS_REGION` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | yes when not on AWS infra | KMS credentials. Drop the access keys if running on an EC2/EKS/Fargate role. |
 | `RELAYER_URL` | yes for `/admin/*` and SPA relayer proxy | Global relayer base URL including scheme and port. |
-| `ADMIN_BASIC_AUTH_PASSWORD` | yes in Docker | Password gating the admin SPA + `/admin/*`. Username is hardcoded `admin`. |
+| `ADMIN_BASIC_AUTH_PASSWORD` | yes when serving HTTP | Password enforced by both nginx and Fastify on `/admin/*`. Username is hardcoded `admin`. |
 | `CHAIN_CONFIGS` | yes | JSON array of per-chain `{ chainId, vaultAddress, graphUrl, rpcUrl }` overrides. `rpcUrl` is per-chain and optional for built-in chain ids; relayer and validator service URLs are global. |
 
 ## Run with Docker (recommended)

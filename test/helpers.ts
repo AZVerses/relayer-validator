@@ -52,6 +52,7 @@ export function createTestConfig(): AppConfig {
     validatorKeyId: 'validator-1',
     callerPemPublicKeyPath: pemPath,
     cexApiUrl: '',
+    adminBasicAuthPassword: 'test-admin-password',
     chainConfigs: [],
   };
 }
