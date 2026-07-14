@@ -35,6 +35,23 @@ describe('validator HTTP API', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it('rejects a leading-space content type before any signing handler runs', async () => {
+    const signSpy = vi.spyOn(SigningService.prototype, 'sign');
+    const response = await app.inject({
+      method: 'POST',
+      url: '/admin/sign-withdraw-operation',
+      headers: {
+        authorization: `Basic ${Buffer.from('admin:test-admin-password').toString('base64')}`,
+        'content-type': ' application/json',
+      },
+      payload: JSON.stringify({ request: {} }),
+    });
+
+    expect(response.statusCode).toBeGreaterThanOrEqual(400);
+    expect(signSpy).not.toHaveBeenCalled();
+    signSpy.mockRestore();
+  });
+
   it('rejects unauthenticated withdraw admin requests before signing', async () => {
     const signSpy = vi.spyOn(SigningService.prototype, 'sign');
     const response = await app.inject({
