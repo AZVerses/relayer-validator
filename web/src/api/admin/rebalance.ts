@@ -61,7 +61,7 @@ export function createRebalanceCollection(
   params: { tokenAddress: string; amount: string; receiver: string },
 ) {
   return signAndForwardRebalanceCreate(
-    getValidatorServiceBase(chainId),
+    getValidatorServiceBase(),
     buildRebalanceSignRequest(chainId, params),
   )
 }
@@ -72,14 +72,14 @@ export function createRebalanceCollection(
  */
 export function collectSignature(id: number, payload: CollectionPayload) {
   return signAndForwardRebalanceCollect(
-    getValidatorServiceBase(payload.chainId),
+    getValidatorServiceBase(),
     buildRebalanceCollectSignRequest(payload),
     id,
   )
 }
 
 export function rejectCollection(id: number, payload: CollectionPayload) {
-  return signAndForwardRebalanceReject(getValidatorServiceBase(payload.chainId), {
+  return signAndForwardRebalanceReject(getValidatorServiceBase(), {
     collectionId: id,
     chainId: payload.chainId,
     vaultAddress: payload.vaultAddress,

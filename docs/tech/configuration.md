@@ -43,7 +43,7 @@ Schema lives at `web/src/types/chain.ts:ChainConfigOverride`:
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| `chainId` | number | yes | EVM chain id. Must exist in the built-in registry. Used to namespace the SPA's same-origin proxy paths (`/api/chain/{chainId}/*`, `/rpc/chain/{chainId}`, `/validator-svc/chain/{chainId}/*`). |
+| `chainId` | number | yes | EVM chain id. Must exist in the built-in registry. Used to namespace the SPA's same-origin relayer and RPC proxy paths (`/api/chain/{chainId}/*`, `/rpc/chain/{chainId}`). Validator calls use direct same-origin `/validator` and `/admin/*` paths. |
 | `graphUrl` | string | yes | Subgraph / indexer URL the admin web queries for vault history. Pass `""` to disable history views. |
 | `vaultAddress` | string | yes | The deployed vault contract on this chain. The SPA fetches on-chain state (withdrawals, paused flags, validator set) by calling this address. |
 | `rpcUrl` | string | required for custom chain ids; optional for built-in chain ids | RPC URL for this chain. `/rpc/chain/{chainId}` routes here. Built-in chains fall back to the same RPC defaults used by the admin web. |

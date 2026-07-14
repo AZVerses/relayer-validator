@@ -84,7 +84,7 @@ function ActiveCollection({ collection, chainId }: { collection: SignatureCollec
   const queryClient = useQueryClient()
   const { data: localValidator } = useQuery({
     queryKey: ['localValidator', chainId],
-    queryFn: () => fetchLocalValidator(getValidatorServiceBase(chainId)),
+    queryFn: () => fetchLocalValidator(getValidatorServiceBase()),
     staleTime: Infinity,
     retry: false,
   })

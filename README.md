@@ -100,9 +100,9 @@ npm install
 npm run dev          # listens on http://localhost:5173
 ```
 
-The SPA dev server proxies `/api/chain/*`, `/validator-svc/chain/*`,
-and `/rpc/chain/*` to the URLs from the built-in chain registry merged
-with `CHAIN_CONFIGS`. The
+The SPA dev server proxies `/api/chain/*`, `/rpc/chain/*`, and the exact
+validator paths `/validator` and `/admin/*` to the URLs from the built-in
+chain registry merged with `CHAIN_CONFIGS`. The
 validator service must already be running for write operations to
 work end-to-end.
 

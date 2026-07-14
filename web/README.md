@@ -10,7 +10,7 @@ cp .env.example .env.development     # CHAIN_CONFIGS is read by Vite dev
 npm run dev                          # http://localhost:5173
 ```
 
-Vite proxies `/api/chain/{chainId}/*` to the relayer and `/rpc/chain/{chainId}` to the public RPC, so dev has no CORS issue.
+Vite proxies `/api/chain/{chainId}/*` to the relayer, `/rpc/chain/{chainId}` to the public RPC, and direct `/validator` plus `/admin/*` paths to the validator service, so dev has no CORS issue.
 
 ## Environment Variables
 
@@ -18,14 +18,14 @@ Vite proxies `/api/chain/{chainId}/*` to the relayer and `/rpc/chain/{chainId}` 
 |----------|---------|-------------|
 | `CHAIN_CONFIGS` | Vite + Docker | JSON array of per-chain `{ chainId, vaultAddress, graphUrl, rpcUrl }`; merged with the built-in chain registry at startup and used to render per-chain RPC proxies. |
 | `RELAYER_URL` | Docker only | Global nginx proxy target for `/api/chain/{chainId}/*`. |
-| `VALIDATOR_SERVICE_URL` | Docker only | Global nginx proxy target for `/validator-svc/chain/{chainId}/*`. |
+| `VALIDATOR_SERVICE_URL` | Docker only | Global nginx proxy target for direct `/validator` and `/admin/*` paths. |
 | `HOST_PORT` | Docker only | Host port to expose nginx on. Default: `8080`. |
 
 ## Docker Deployment (VPS / CI-CD)
 
 The container runs nginx that does two things:
 1. Serves the built SPA from `dist/`
-2. Reverse-proxies `/api/chain/{chainId}/*` to global `RELAYER_URL`, `/validator-svc/chain/{chainId}/*` to global `VALIDATOR_SERVICE_URL`, and `/rpc/chain/{chainId}` to per-chain `CHAIN_CONFIGS[].rpcUrl`
+2. Reverse-proxies `/api/chain/{chainId}/*` to global `RELAYER_URL`, direct `/validator` and `/admin/*` paths to global `VALIDATOR_SERVICE_URL`, and `/rpc/chain/{chainId}` to per-chain `CHAIN_CONFIGS[].rpcUrl`
 
 This keeps frontend + relayer on the same origin — no CORS, no cross-origin cookie issues.
 

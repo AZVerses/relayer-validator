@@ -1,9 +1,9 @@
 # Single-image deployment: serves the admin SPA and the validator API on
 # one port. Internally, nginx fronts a localhost-only fastify process;
 # the SPA, validator API (/sign, /validator, /health, /admin/*), the
-# relayer proxy (/api/chain/{chainId}/*), the validator self-proxy
-# (/validator-svc/chain/{chainId}/*), and the RPC proxy (/rpc/chain/...)
-# all share APP_PORT.
+# relayer proxy (/api/chain/{chainId}/*) and the RPC proxy
+# (/rpc/chain/...) all share APP_PORT. The SPA calls /validator and
+# /admin/* directly on this same origin.
 
 # ===== Stage 1: build the admin SPA =====
 FROM node:20-alpine AS web-builder

@@ -21,7 +21,7 @@ function vaultAddressFor(chainId: number): string {
 }
 
 export function flushWithdrawals(chainId: number, requestIds: string[]) {
-  return signAndForwardValidatorAction(getValidatorServiceBase(chainId), {
+  return signAndForwardValidatorAction(getValidatorServiceBase(), {
     action: 'batch-flush-withdrawals',
     chainId,
     vaultAddress: vaultAddressFor(chainId),
@@ -31,7 +31,7 @@ export function flushWithdrawals(chainId: number, requestIds: string[]) {
 }
 
 export function pauseWithdrawal(chainId: number, requestId: string) {
-  return signAndForwardValidatorAction(getValidatorServiceBase(chainId), {
+  return signAndForwardValidatorAction(getValidatorServiceBase(), {
     action: 'batch-toggle-pending-withdrawal',
     chainId,
     vaultAddress: vaultAddressFor(chainId),
@@ -42,7 +42,7 @@ export function pauseWithdrawal(chainId: number, requestId: string) {
 }
 
 export function unpauseWithdrawal(chainId: number, requestId: string) {
-  return signAndForwardValidatorAction(getValidatorServiceBase(chainId), {
+  return signAndForwardValidatorAction(getValidatorServiceBase(), {
     action: 'batch-toggle-pending-withdrawal',
     chainId,
     vaultAddress: vaultAddressFor(chainId),
@@ -53,7 +53,7 @@ export function unpauseWithdrawal(chainId: number, requestId: string) {
 }
 
 export function executeWithdrawal(chainId: number, requestId: string) {
-  return signAndForwardValidatorAction(getValidatorServiceBase(chainId), {
+  return signAndForwardValidatorAction(getValidatorServiceBase(), {
     action: 'execute-pending-withdrawal',
     chainId,
     vaultAddress: vaultAddressFor(chainId),
@@ -63,7 +63,7 @@ export function executeWithdrawal(chainId: number, requestId: string) {
 }
 
 export function resetHotAmount(chainId: number, tokenAddresses: string[]) {
-  return signAndForwardValidatorAction(getValidatorServiceBase(chainId), {
+  return signAndForwardValidatorAction(getValidatorServiceBase(), {
     action: 'batch-reset-withdraw-hot-amount',
     chainId,
     vaultAddress: vaultAddressFor(chainId),

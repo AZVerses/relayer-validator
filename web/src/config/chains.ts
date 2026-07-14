@@ -38,11 +38,7 @@ export function getRpcUrl(chainId: number): string {
   return `/rpc/chain/${chainId}`
 }
 
-/**
- * Local validator service base URL — same-origin path.
- * Dev: Vite proxy forwards to chain.validatorServiceUrl.
- * Prod: nginx forwards to the current validator deployment.
- */
-export function getValidatorServiceBase(chainId: number): string {
-  return `/validator-svc/chain/${chainId}`
+/** Validator API is served directly on the admin SPA origin. */
+export function getValidatorServiceBase(): string {
+  return ''
 }

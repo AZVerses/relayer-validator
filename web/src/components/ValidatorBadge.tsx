@@ -9,7 +9,7 @@ export function ValidatorBadge() {
   const chainId = useChainStore((s) => s.selectedChainId)
   const { data, isLoading, isError } = useQuery({
     queryKey: ['localValidator', chainId],
-    queryFn: () => fetchLocalValidator(getValidatorServiceBase(chainId)),
+    queryFn: () => fetchLocalValidator(getValidatorServiceBase()),
     staleTime: Infinity,
     retry: false,
   })

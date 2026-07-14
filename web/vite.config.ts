@@ -16,18 +16,27 @@ export default defineConfig(({ mode }) => {
     : []
 
   const proxy: Record<string, object> = {}
+  const validatorServiceUrls = [...new Set(chains.map(chain => chain.validatorServiceUrl))]
+  if (validatorServiceUrls.length > 1) {
+    throw new Error('all chains must use the same validatorServiceUrl')
+  }
+  const validatorServiceUrl = validatorServiceUrls[0]
+  if (validatorServiceUrl) {
+    proxy['/validator'] = {
+      target: validatorServiceUrl,
+      changeOrigin: true,
+    }
+    proxy['/admin'] = {
+      target: validatorServiceUrl,
+      changeOrigin: true,
+    }
+  }
   for (const chain of chains) {
     // Admin API proxy → relayer
     proxy[`/api/chain/${chain.chainId}`] = {
       target: chain.relayerUrl,
       changeOrigin: true,
       rewrite: (path: string) => path.replace(`/api/chain/${chain.chainId}`, ''),
-    }
-    // Local validator service proxy
-    proxy[`/validator-svc/chain/${chain.chainId}`] = {
-      target: chain.validatorServiceUrl,
-      changeOrigin: true,
-      rewrite: (path: string) => path.replace(`/validator-svc/chain/${chain.chainId}`, ''),
     }
     // RPC proxy (avoid browser CORS)
     proxy[`/rpc/chain/${chain.chainId}`] = {
