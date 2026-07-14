@@ -395,30 +395,30 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
   app.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
     if (error instanceof RiskCheckError) {
       request.log.warn(
-        { reason: 'risk-check-denied', ...describeBody(request.body) },
+        { reason: 'risk-check-denied', ...describeBody(request.body), err: error },
         `request rejected by risk check: ${error.message}`,
       );
-      void reply.status(400).send({ error: error.message });
+      void reply.status(400).send({ error: 'Risk check rejected request' });
       return;
     }
 
     if (isAxiosError(error)) {
       request.log.error(
-        { reason: 'proxy-error', err: error.message },
+        { reason: 'proxy-error', err: error },
         'proxied request failed',
       );
       void reply.status(502).send({
-        error: error.message,
+        error: 'Upstream request failed',
       });
       return;
     }
 
     request.log.error(
-      { reason: 'unhandled-error', ...describeBody(request.body), err: error?.message ?? String(error) },
+      { reason: 'unhandled-error', ...describeBody(request.body), err: error },
       'request failed with unhandled error',
     );
     void reply.status(500).send({
-      error: error instanceof Error ? error.message : String(error),
+      error: 'Internal server error',
     });
   });
 

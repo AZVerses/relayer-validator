@@ -213,10 +213,59 @@ describe('validator HTTP API', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({
-      error: 'Risk check failed: cex timeout',
+      error: 'Risk check rejected request',
     });
 
     signSpy.mockRestore();
+  });
+
+  it('does not return an unhandled internal error message to the caller', async () => {
+    const payload = {
+      action: 'rebalance-withdraw',
+      tokenAddress: '0x1111111111111111111111111111111111111111',
+      amount: '10',
+      receiver: '0x3333333333333333333333333333333333333333',
+      chainId: 11155111,
+      vaultAddress: '0x2222222222222222222222222222222222222222',
+      nonce: '12',
+    };
+    const signSpy = vi.spyOn(SigningService.prototype, 'sign').mockRejectedValueOnce(
+      new Error('sensitive kms key arn and stack'),
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/sign',
+      headers: createSignedHeaders(payload, callerPrivateKeyPem),
+      payload,
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ error: 'Internal server error' });
+    expect(response.body).not.toContain('sensitive kms');
+    signSpy.mockRestore();
+  });
+
+  it('does not return an upstream connection error message to the caller', async () => {
+    await app.close();
+    const config = createTestConfig();
+    const callerKeys = createCallerKeyPair();
+    config.callerPemPublicKeyPath = callerKeys.publicKeyPath;
+    config.relayerUrl = 'http://127.0.0.1:1';
+    app = await buildApp({
+      config,
+      signingService: new SigningService(config, new InMemorySignerBackend()),
+    });
+    await app.ready();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/chain/42161/api/public/withdraws',
+    });
+
+    expect(response.statusCode).toBe(502);
+    expect(response.json()).toEqual({ error: 'Upstream request failed' });
+    expect(response.body).not.toContain('127.0.0.1');
   });
 
   it('proxies relayer globally and RPC requests by chainId', async () => {

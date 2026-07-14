@@ -21,7 +21,7 @@ External signer service used by `az-vault-relayer` for withdraw-related vault ac
 
 Supported `/sign` actions: `request-withdraw`, `batch-flush-withdrawals`, `batch-toggle-pending-withdrawal`, `execute-pending-withdrawal`, `batch-reset-withdraw-hot-amount`, `rebalance-withdraw`, `reject-rebalance-collection`.
 
-Failure codes: `400` on bad input or risk-check denial, `401` on bad caller signature, `500` on internal error.
+Failure codes: `400` on bad input or risk-check denial, `401` on bad caller signature, `502` on upstream failure, and `500` on internal error. Internal exception details are logged server-side and are not returned to clients.
 
 ## Configuration
 
