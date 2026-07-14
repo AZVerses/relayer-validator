@@ -108,21 +108,14 @@ describe('loadConfig', () => {
     ]);
   });
 
-  it('uses built-in RPC URL for known chains when CHAIN_CONFIGS omits rpcUrl', () => {
-    const config = loadConfig(baseEnv({
+  it('requires an explicit RPC URL for Arbitrum One', () => {
+    expect(() => loadConfig(baseEnv({
       CHAIN_CONFIGS: JSON.stringify([
         {
           chainId: 42161,
         },
       ]),
-    }));
-
-    expect(config.chainConfigs).toEqual([
-      {
-        chainId: 42161,
-        rpcUrl: 'https://solitary-empty-shard.arbitrum-mainnet.quiknode.pro/c3231ec35435fecf285eaa7e4b5010dc75881ec0/',
-      },
-    ]);
+    }))).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for chainId 42161');
   });
 
   it('requires rpcUrl for custom chain ids', () => {
@@ -132,7 +125,7 @@ describe('loadConfig', () => {
           chainId: 999999,
         },
       ]),
-    }))).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for custom chainId 999999');
+    }))).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for chainId 999999');
   });
 
   it('rejects duplicate chain ids in CHAIN_CONFIGS', () => {

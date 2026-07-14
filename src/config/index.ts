@@ -29,10 +29,6 @@ export interface ChainRouteConfig {
 }
 
 const builtInRpcUrlsByChainId = new Map<number, string>([
-  [
-    42161,
-    'https://solitary-empty-shard.arbitrum-mainnet.quiknode.pro/c3231ec35435fecf285eaa7e4b5010dc75881ec0/',
-  ],
   [421614, 'https://arbitrum-sepolia-rpc.publicnode.com'],
   [11155111, 'https://ethereum-sepolia-rpc.publicnode.com'],
 ]);
@@ -119,7 +115,7 @@ function parseChainRouteConfigs(raw: string | undefined): ChainRouteConfig[] {
 
     const rpcUrl = parseOptionalUrlField(record, index, 'rpcUrl') ?? builtInRpcUrlsByChainId.get(chainId);
     if (!rpcUrl) {
-      throw new Error(`CHAIN_CONFIGS[${index}].rpcUrl is required for custom chainId ${chainId}`);
+      throw new Error(`CHAIN_CONFIGS[${index}].rpcUrl is required for chainId ${chainId}`);
     }
 
     return { chainId, rpcUrl };

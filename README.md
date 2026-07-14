@@ -39,7 +39,7 @@ below is just enough to get the container booting:
 | `AWS_REGION` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | yes when not on AWS infra | KMS credentials. Drop the access keys if running on an EC2/EKS/Fargate role. |
 | `RELAYER_URL` | yes for `/admin/*` and SPA relayer proxy | Global relayer base URL including scheme and port. |
 | `ADMIN_BASIC_AUTH_PASSWORD` | yes when serving HTTP | Password enforced by both nginx and Fastify on `/admin/*`. Username is hardcoded `admin`. |
-| `CHAIN_CONFIGS` | yes | JSON array of per-chain `{ chainId, vaultAddress, graphUrl, rpcUrl }` overrides. `rpcUrl` is per-chain and optional for built-in chain ids; relayer and validator service URLs are global. |
+| `CHAIN_CONFIGS` | yes | JSON array of per-chain `{ chainId, vaultAddress, graphUrl, rpcUrl }` overrides. `rpcUrl` is required for Arbitrum One; relayer and validator service URLs are global. |
 
 ## Run with Docker (recommended)
 
@@ -74,7 +74,7 @@ CALLER_PEM_PUBLIC_KEY_SHA256=
 CEX_API_URL=https://cex.example.com
 RELAYER_URL=http://relayer:3000
 ADMIN_BASIC_AUTH_PASSWORD=replace-with-a-real-password
-CHAIN_CONFIGS=[{"chainId":42161,"vaultAddress":"0x949556cb8634F9a4a8504665C3d0D9d326c600b2","graphUrl":"","rpcUrl":"https://solitary-empty-shard.arbitrum-mainnet.quiknode.pro/c3231ec35435fecf285eaa7e4b5010dc75881ec0/"}]
+CHAIN_CONFIGS=[{"chainId":42161,"vaultAddress":"0x949556cb8634F9a4a8504665C3d0D9d326c600b2","graphUrl":"","rpcUrl":"https://your-arbitrum-rpc.example"}]
 ```
 
 ## Run locally (no Docker)

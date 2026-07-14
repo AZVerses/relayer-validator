@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServer, Server } from 'http';
-import axios from 'axios';
 import { buildApp } from '../src/server/app';
 import { SigningService } from '../src/services/signing/service';
 import { createCallerKeyPair, createSignedHeaders, createTestConfig, InMemorySignerBackend } from './helpers';
@@ -279,43 +278,15 @@ describe('validator HTTP API', () => {
     }
   });
 
-  it('does not reject built-in chain RPC proxy when rpcUrl is omitted from CHAIN_CONFIGS', async () => {
-    await app.close();
+  it('rejects Arbitrum One config when rpcUrl is omitted', async () => {
     const callerKeys = createCallerKeyPair();
-    const config = loadConfig({
+    expect(() => loadConfig({
       KMS_KEY_ID_VALIDATOR: 'validator-key',
       CALLER_PEM_PUBLIC_KEY_PATH: callerKeys.publicKeyPath,
       CEX_API_URL: 'https://cex.example.com',
       ADMIN_BASIC_AUTH_PASSWORD: 'test-admin-password',
       CHAIN_CONFIGS: JSON.stringify([{ chainId: 42161 }]),
-    });
-    config.logLevel = 'silent';
-    app = await buildApp({
-      config,
-      signingService: new SigningService(config, new InMemorySignerBackend()),
-    });
-    await app.ready();
-    const requestSpy = vi.spyOn(axios, 'request').mockResolvedValueOnce({
-      status: 200,
-      data: { rpc: 'fallback' },
-      headers: {},
-    } as never);
-
-    const response = await app.inject({
-      method: 'POST',
-      url: '/rpc/chain/42161',
-      payload: { jsonrpc: '2.0', method: 'eth_chainId', id: 1 },
-    });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ rpc: 'fallback' });
-    expect(requestSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: 'https://solitary-empty-shard.arbitrum-mainnet.quiknode.pro/c3231ec35435fecf285eaa7e4b5010dc75881ec0/',
-        method: 'POST',
-      }),
-    );
-    requestSpy.mockRestore();
+    })).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for chainId 42161');
   });
 
   it('rejects custom chain RPC proxy at config load when rpcUrl is omitted', () => {
@@ -324,7 +295,7 @@ describe('validator HTTP API', () => {
       CALLER_PEM_PUBLIC_KEY_PATH: 'resources/relayer.pem',
       CEX_API_URL: 'https://cex.example.com',
       CHAIN_CONFIGS: JSON.stringify([{ chainId: 999999 }]),
-    })).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for custom chainId 999999');
+    })).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for chainId 999999');
   });
 });
 

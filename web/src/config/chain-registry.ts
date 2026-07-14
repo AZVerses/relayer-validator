@@ -1,6 +1,6 @@
 import type { ChainConfig, ChainConfigOverride } from '../types/chain'
 
-type BuiltInChainConfig = Omit<ChainConfig, 'graphUrl' | 'vaultAddress'>
+type BuiltInChainConfig = Omit<ChainConfig, 'graphUrl' | 'vaultAddress' | 'rpcUrl'> & { rpcUrl?: string }
 
 const BUILT_IN_CHAINS: BuiltInChainConfig[] = [
   {
@@ -9,7 +9,6 @@ const BUILT_IN_CHAINS: BuiltInChainConfig[] = [
     relayerUrl: 'http://localhost:3000',
     validatorServiceUrl: 'http://localhost:3001',
     explorerUrl: 'https://arbiscan.io',
-    rpcUrl: 'https://solitary-empty-shard.arbitrum-mainnet.quiknode.pro/c3231ec35435fecf285eaa7e4b5010dc75881ec0/',
     startBlock: 476067900,
   },
   {
@@ -93,6 +92,9 @@ export function mergeChainConfigs(overrides: ChainConfigOverride[]): ChainConfig
     if (!base && !hasFullChainConfigOverride(override)) {
       throw new Error(`CHAIN_CONFIGS contains unsupported chainId ${override.chainId}; provide name, explorerUrl, rpcUrl, and startBlock to add a custom chain`)
     }
+    if (!override.rpcUrl && !base?.rpcUrl) {
+      throw new Error(`CHAIN_CONFIGS requires rpcUrl for chainId ${override.chainId}`)
+    }
 
     return {
       ...(base ?? {
@@ -108,7 +110,7 @@ export function mergeChainConfigs(overrides: ChainConfigOverride[]): ChainConfig
       relayerUrl: base?.relayerUrl ?? 'http://localhost:3000',
       validatorServiceUrl: base?.validatorServiceUrl ?? 'http://localhost:3001',
       explorerUrl: override.explorerUrl ?? base?.explorerUrl ?? override.explorerUrl!,
-      rpcUrl: override.rpcUrl ?? base?.rpcUrl ?? override.rpcUrl!,
+      rpcUrl: override.rpcUrl ?? base!.rpcUrl!,
       startBlock: override.startBlock ?? base?.startBlock ?? override.startBlock!,
       graphUrl: override.graphUrl,
       vaultAddress: override.vaultAddress,

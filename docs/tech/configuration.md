@@ -46,7 +46,7 @@ Schema lives at `web/src/types/chain.ts:ChainConfigOverride`:
 | `chainId` | number | yes | EVM chain id. Must exist in the built-in registry. Used to namespace the SPA's same-origin relayer and RPC proxy paths (`/api/chain/{chainId}/*`, `/rpc/chain/{chainId}`). Validator calls use direct same-origin `/validator` and `/admin/*` paths. |
 | `graphUrl` | string | yes | Subgraph / indexer URL the admin web queries for vault history. Pass `""` to disable history views. |
 | `vaultAddress` | string | yes | The deployed vault contract on this chain. The SPA fetches on-chain state (withdrawals, paused flags, validator set) by calling this address. |
-| `rpcUrl` | string | required for custom chain ids; optional for built-in chain ids | RPC URL for this chain. `/rpc/chain/{chainId}` routes here. Built-in chains fall back to the same RPC defaults used by the admin web. |
+| `rpcUrl` | string | required for Arbitrum One and custom chain ids | RPC URL for this chain. `/rpc/chain/{chainId}` routes here. Testnet built-ins may use public defaults; production mainnet has no credential-bearing source fallback. |
 | `name`, `explorerUrl`, `startBlock` | string / number | required only for custom chain ids | Optional overrides for built-in chains. Full metadata is required when adding a chain id not in the built-in registry. |
 
 Concrete example for Arbitrum One:
@@ -57,7 +57,7 @@ Concrete example for Arbitrum One:
     "chainId": 42161,
     "vaultAddress": "0x949556cb8634F9a4a8504665C3d0D9d326c600b2",
     "graphUrl": "",
-    "rpcUrl": "https://solitary-empty-shard.arbitrum-mainnet.quiknode.pro/c3231ec35435fecf285eaa7e4b5010dc75881ec0/"
+    "rpcUrl": "https://your-arbitrum-rpc.example"
   }
 ]
 ```
@@ -66,8 +66,8 @@ Notes:
 - Production single-image deploys read this through `docker/config.js.template` at container start and inject it into `window.__APP_CONFIG__.CHAIN_CONFIGS`. The SPA merges that runtime config in `web/src/config/chains.ts:getChains`.
 - The validator service also parses `CHAIN_CONFIGS` for per-chain `rpcUrl`. It forwards
   `/admin/sign-*` and `/api/chain/{chainId}/*` to the global `RELAYER_URL`; it proxies
-  `/rpc/chain/{chainId}` to that chain's configured `rpcUrl`, or to the built-in RPC
-  fallback for known chain ids when `rpcUrl` is omitted.
+  `/rpc/chain/{chainId}` to that chain's configured `rpcUrl`. Arbitrum One requires an
+  explicit value; testnet built-ins may use public fallbacks.
 - For local `npm run dev` in `web/`, set `CHAIN_CONFIGS` in `web/.env.local` or `web/.env.development`.
 - If neither `window.__APP_CONFIG__.CHAIN_CONFIGS` nor `CHAIN_CONFIGS` is set, the SPA throws at startup instead of silently using a hard-coded vault address.
 - Built-in chain metadata such as RPC proxy defaults, explorer URL, and
