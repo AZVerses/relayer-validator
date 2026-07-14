@@ -109,6 +109,24 @@ describe('validator HTTP API', () => {
     signSpy.mockRestore();
   });
 
+  it('rejects unauthenticated rebalance reject requests before signing', async () => {
+    const signSpy = vi.spyOn(SigningService.prototype, 'sign');
+    const response = await app.inject({
+      method: 'POST',
+      url: '/admin/sign-rebalance-reject',
+      payload: {
+        collectionId: 1,
+        chainId: 42161,
+        vaultAddress: '0x1111111111111111111111111111111111111111',
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.headers['www-authenticate']).toContain('Basic');
+    expect(signSpy).not.toHaveBeenCalled();
+    signSpy.mockRestore();
+  });
+
   it('returns signed payload for rebalanceWithdraw', async () => {
     const payload = {
       action: 'rebalance-withdraw',

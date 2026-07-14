@@ -370,7 +370,7 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
     return reply.status(result.status).send(result.data);
   });
 
-  app.post('/admin/sign-rebalance-reject', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.post('/admin/sign-rebalance-reject', { preHandler: authenticateAdmin }, async (request: FastifyRequest, reply: FastifyReply) => {
     const envelope = signRebalanceRejectBodySchema.safeParse(request.body);
     if (!envelope.success) {
       return reply.status(400).send({ error: 'Invalid request', details: envelope.error.flatten() });

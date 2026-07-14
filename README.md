@@ -17,7 +17,7 @@ External signer service used by `az-vault-relayer` for withdraw-related vault ac
 | `GET`  | `/validator` | Returns `{ validatorAddress }`. |
 | `POST` | `/sign` | Sign a relayer-issued vault action. Caller must include `x-signature`, `x-timestamp`, `x-nonce` headers. |
 | `POST` | `/admin/sign-withdraw-operation` | Basic-authenticated sign + forward for existing-withdrawal admin actions and rebalance. It rejects `request-withdraw`. Returns 503 if `RELAYER_URL` is not set. |
-| `POST` | `/admin/sign-rebalance-reject` | Sign + forward a rebalance reject to the global relayer. Returns 503 if `RELAYER_URL` is not set. |
+| `POST` | `/admin/sign-rebalance-reject` | Basic-authenticated sign + forward for a rebalance reject. Returns 503 if `RELAYER_URL` is not set. |
 
 Supported `/sign` actions: `request-withdraw`, `batch-flush-withdrawals`, `batch-toggle-pending-withdrawal`, `execute-pending-withdrawal`, `batch-reset-withdraw-hot-amount`, `rebalance-withdraw`, `reject-rebalance-collection`.
 
