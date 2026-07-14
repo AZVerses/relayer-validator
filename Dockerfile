@@ -45,7 +45,9 @@ COPY --from=web-builder /web/dist /usr/share/nginx/html
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/config.js.template /docker-templates/config.js.template
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && mkdir -p /etc/nginx/http.d /run/nginx /var/lib/nginx/tmp /var/log/nginx \
+    && chown -R node:node /etc/nginx /run/nginx /var/lib/nginx /var/log/nginx /usr/share/nginx/html
 
 # APP_PORT is the externally-exposed port (SPA + API share it).
 # INTERNAL_VALIDATOR_PORT is the loopback-only fastify bind; nginx is
@@ -56,5 +58,6 @@ ENV LOG_LEVEL=info
 
 EXPOSE 3001
 
+USER node
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["/entrypoint.sh"]

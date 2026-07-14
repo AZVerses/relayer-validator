@@ -6,6 +6,16 @@ set -euo pipefail
 
 : "${APP_PORT:=3001}"
 : "${INTERNAL_VALIDATOR_PORT:=3010}"
+case "${APP_PORT}:${INTERNAL_VALIDATOR_PORT}" in
+  *[!0-9:]*|:*)
+    echo 'APP_PORT and INTERNAL_VALIDATOR_PORT must be numeric' >&2
+    exit 1
+    ;;
+esac
+if [ "${APP_PORT}" -lt 1024 ] || [ "${INTERNAL_VALIDATOR_PORT}" -lt 1024 ]; then
+  echo 'APP_PORT and INTERNAL_VALIDATOR_PORT must be unprivileged ports (>= 1024)' >&2
+  exit 1
+fi
 
 # Pull resolvers from /etc/resolv.conf so Docker-internal names
 # (host.docker.internal, *.docker.internal, container-network names)
@@ -30,10 +40,7 @@ fi
 # unauthenticated. bcrypt (-B) for forward secrecy if the file leaks.
 : "${ADMIN_BASIC_AUTH_PASSWORD:?ADMIN_BASIC_AUTH_PASSWORD must be set}"
 htpasswd -bcB /etc/nginx/.htpasswd admin "${ADMIN_BASIC_AUTH_PASSWORD}"
-NGINX_WORKER_USER=$(nginx -T 2>/dev/null | awk '$1 == "user" { gsub(";", "", $2); print $2; exit }')
-NGINX_WORKER_USER="${NGINX_WORKER_USER:-nginx}"
-chown "root:${NGINX_WORKER_USER}" /etc/nginx/.htpasswd
-chmod 640 /etc/nginx/.htpasswd
+chmod 600 /etc/nginx/.htpasswd
 
 # Render nginx config — only explicit template vars are substituted so
 # nginx's own $request_uri / $proxy_host / etc. survive.

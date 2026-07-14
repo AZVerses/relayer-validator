@@ -56,6 +56,9 @@ docker run --rm \
 
 Open `http://<host>:3001/` for the admin web. The relayer reaches the validator at the same host as `/sign`.
 
+The combined runtime runs Nginx and Node as the non-root `node` user. Keep `APP_PORT` and
+`INTERNAL_VALIDATOR_PORT` at unprivileged values (`>= 1024`); the defaults are 3001 and 3010.
+
 The browser-facing `/api/chain/:chainId/*` proxy is Basic-authenticated and only permits the
 read-only public deposit/withdrawal and signature-collection GET routes used by the SPA. It
 does not expose arbitrary relayer paths.

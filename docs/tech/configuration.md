@@ -9,7 +9,7 @@ Read by `src/config/index.ts:loadConfig`. Missing required values cause the proc
 | Variable | Required | Default | Used for |
 |---|---|---|---|
 | `APP_HOST` | optional | `127.0.0.1` | fastify bind host. Docker entrypoint pins this to `127.0.0.1` so only nginx talks to fastify. |
-| `APP_PORT` | optional | `3001` | **Externally exposed** port in single-image mode (nginx listens here). The internal fastify uses `INTERNAL_VALIDATOR_PORT` (set by entrypoint, default `3010`). |
+| `APP_PORT` | optional | `3001` | **Externally exposed** unprivileged port in single-image mode (must be >= 1024; nginx listens here). The internal fastify uses `INTERNAL_VALIDATOR_PORT` (default `3010`, also >= 1024). |
 | `LOG_LEVEL` | optional | `info` | pino level (`trace` / `debug` / `info` / `warn` / `error`). |
 | `AWS_REGION` | optional | `ap-northeast-1` | KMS region. |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | optional | none | If unset, the AWS SDK falls back to IAM role / instance profile / SSO. Set explicitly only when running outside an AWS-trusted environment. |
@@ -29,10 +29,9 @@ Used only by `docker/entrypoint.sh` and `docker/nginx.conf.template`. Irrelevant
 | `ADMIN_BASIC_AUTH_PASSWORD` | **required when serving HTTP** | — | Single shared password protecting the admin SPA root and `/admin/*` endpoints (username hardcoded `admin`). Both nginx and Fastify enforce it; the server fails to start if unset. |
 | `INTERNAL_VALIDATOR_PORT` | optional | `3010` | Loopback-only port fastify binds inside the container; nginx is the only thing that talks to it. Rarely needs override. |
 
-The entrypoint writes `/etc/nginx/.htpasswd` for basic auth and sets it
-to `root:<nginx-worker-user>` with mode `640`. Do not tighten it to
-`600`: Alpine nginx workers do not run as root, so they must be able to
-read the file or valid logins return nginx `500`.
+The final image runs as the non-root `node` user. Build time grants that user write access only
+to the Nginx runtime/config directories and generated SPA config location. The entrypoint writes
+`/etc/nginx/.htpasswd` with mode `600`; Nginx master and workers share the same unprivileged user.
 
 ## Admin SPA — `CHAIN_CONFIGS`
 
