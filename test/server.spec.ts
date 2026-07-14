@@ -230,14 +230,35 @@ describe('validator HTTP API', () => {
 
       const relayerResponse = await app.inject({
         method: 'GET',
-        url: '/api/chain/421614/api/admin/auth/me?x=1',
+        url: '/api/chain/421614/api/public/withdraws?x=1',
+        headers: { authorization: 'Basic must-not-reach-relayer' },
       });
       expect(relayerResponse.statusCode).toBe(200);
       expect(relayerResponse.json()).toMatchObject({
         relayer: 'global',
         method: 'GET',
-        url: '/api/admin/auth/me?x=1',
+        url: '/api/public/withdraws?x=1',
+        authorization: null,
       });
+
+      const disallowedPathResponse = await app.inject({
+        method: 'GET',
+        url: '/api/chain/421614/api/admin/auth/me',
+      });
+      expect(disallowedPathResponse.statusCode).toBe(404);
+
+      const disallowedMethodResponse = await app.inject({
+        method: 'POST',
+        url: '/api/chain/421614/api/public/withdraws',
+        payload: {},
+      });
+      expect(disallowedMethodResponse.statusCode).toBe(404);
+
+      const traversalResponse = await app.inject({
+        method: 'GET',
+        url: '/api/chain/421614/api/public/%2e%2e/withdraws',
+      });
+      expect(traversalResponse.statusCode).toBe(404);
 
       const rpcResponse = await app.inject({
         method: 'POST',
@@ -317,6 +338,7 @@ async function createJsonServer(extra: Record<string, unknown>): Promise<{ serve
         ...extra,
         method: req.method,
         url: req.url,
+        authorization: req.headers.authorization ?? null,
         body: Buffer.concat(chunks).toString('utf8'),
       }));
     });

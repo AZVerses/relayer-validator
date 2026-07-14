@@ -56,6 +56,10 @@ docker run --rm \
 
 Open `http://<host>:3001/` for the admin web. The relayer reaches the validator at the same host as `/sign`.
 
+The browser-facing `/api/chain/:chainId/*` proxy is Basic-authenticated and only permits the
+read-only public deposit/withdrawal and signature-collection GET routes used by the SPA. It
+does not expose arbitrary relayer paths.
+
 Mount the relayer's PEM at `CALLER_PEM_PUBLIC_KEY_PATH`. If `CALLER_PEM_PUBLIC_KEY_PATH` is an `https://` URL, the mount is not needed, but `CALLER_PEM_PUBLIC_KEY_SHA256` is required.
 
 Minimal `.env` — copy `.env.example` and fill in:

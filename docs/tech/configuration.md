@@ -18,7 +18,7 @@ Read by `src/config/index.ts:loadConfig`. Missing required values cause the proc
 | `CALLER_PEM_PUBLIC_KEY_PATH` | **required** | — | Path on disk **or** `https://` URL of the relayer's PEM public key. The validator uses this to verify the `x-signature` header on every `/sign` request. |
 | `CALLER_PEM_PUBLIC_KEY_SHA256` | required for HTTPS PEM URLs | none | 64-character SHA-256 hex digest of the normalized relayer PEM content. Local files may also be pinned with this value. |
 | `CEX_API_URL` | **required** | — | Base URL of the CEX risk service. `/sign` will call `${CEX_API_URL}/az/api/relayer/withdraw/verify?requestId=<id>` and refuse to sign if the response is `{"code":0,"data":false}` or anything other than `{"code":0,"data":true}`. |
-| `RELAYER_URL` | required for `/admin/*` and `/api/chain/*` proxy | none | Global relayer base URL. The relayer receives chain-specific action payloads and API paths; this value is not configured per chain. |
+| `RELAYER_URL` | required for `/admin/*` and `/api/chain/*` proxy | none | Global relayer base URL. Browser proxying is limited to the Basic-authenticated read-only route allowlist used by the SPA; admin writes use server-side forwarders. |
 
 ## Docker single-image deploy (nginx + entrypoint)
 

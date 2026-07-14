@@ -55,6 +55,7 @@ function stripHopByHopHeaders(headers: Record<string, unknown>): Record<string, 
   }
   for (const key of [
     'connection',
+    'authorization',
     'content-length',
     'host',
     'keep-alive',
@@ -100,6 +101,18 @@ function stripChainProxyPrefix(rawUrl: string, chainId: number, prefix: 'api' | 
   }
   const stripped = rawUrl.slice(routePrefix.length);
   return stripped || '/';
+}
+
+function isAllowedRelayerProxyRequest(method: string, pathAndQuery: string): boolean {
+  if (method !== 'GET') {
+    return false;
+  }
+  const path = pathAndQuery.split('?', 1)[0];
+  return path === '/api/public/deposits'
+    || path === '/api/public/withdraws'
+    || path === '/api/signature-collections'
+    || path === '/api/signature-collections/active'
+    || /^\/api\/signature-collections\/[1-9][0-9]*$/.test(path);
 }
 
 // Same window the relayer uses on its own caller-signed endpoints
@@ -170,6 +183,9 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
       return reply.status(502).send({ error: 'RELAYER_URL not configured' });
     }
     const pathAndQuery = stripChainProxyPrefix(request.raw.url ?? request.url, chainId, 'api');
+    if (!isAllowedRelayerProxyRequest(request.method, pathAndQuery)) {
+      return reply.status(404).send({ error: 'Not found' });
+    }
     const response = await axios.request({
       url: joinBaseUrl(relayerUrl, pathAndQuery),
       method: request.method as Method,
