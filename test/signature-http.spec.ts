@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { createHash } from 'crypto';
+import { createHash, generateKeyPairSync } from 'crypto';
 import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readPemPublicKey } from '../src/services/http/signature';
+import { readPemPublicKey, validateInlinePemPublicKey } from '../src/services/http/signature';
 
 vi.mock('axios');
 
@@ -113,5 +113,17 @@ describe('readPemPublicKey', () => {
     await expect(readPemPublicKey('https://cdn.example.com/caller.pem', pemSha256(remotePem))).rejects.toThrow(
       'unexpected status 302',
     );
+  });
+});
+
+describe('validateInlinePemPublicKey', () => {
+  it('normalizes escaped newlines and validates a PEM public key', () => {
+    const { publicKey } = generateKeyPairSync('ec', { namedCurve: 'secp256k1' });
+    const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+    expect(validateInlinePemPublicKey(pem.replace(/\n/g, '\\n'))).toBe(pem.trim());
+  });
+
+  it('rejects malformed inline PEM content', () => {
+    expect(() => validateInlinePemPublicKey('not-a-pem')).toThrow('Invalid CALLER_PEM_PUBLIC_KEY');
   });
 });

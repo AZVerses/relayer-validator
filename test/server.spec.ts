@@ -25,6 +25,18 @@ describe('validator HTTP API', () => {
     await app.close();
   });
 
+  it('loads an inline caller PEM when the path mode is absent', async () => {
+    const config = createTestConfig();
+    const callerKeys = createCallerKeyPair();
+    config.callerPemPublicKey = callerKeys.publicKeyPem;
+    config.callerPemPublicKeyPath = undefined;
+    const signingService = new SigningService(config, new InMemorySignerBackend());
+    const inlineApp = await buildApp({ config, signingService });
+
+    await inlineApp.ready();
+    await inlineApp.close();
+  });
+
   it('rejects missing signed headers on sign endpoint', async () => {
     const response = await app.inject({
       method: 'POST',

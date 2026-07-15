@@ -9,7 +9,8 @@ export interface AppConfig {
   awsSecretAccessKey: string;
   awsSessionToken?: string;
   validatorKeyId: string;
-  callerPemPublicKeyPath: string;
+  callerPemPublicKey?: string;
+  callerPemPublicKeyPath?: string;
   callerPemPublicKeySha256?: string;
   cexApiUrl: string;
   /** Existing Docker Basic Auth password, reused by Fastify admin routes. */
@@ -128,14 +129,24 @@ function parseChainRouteConfigs(raw: string | undefined): ChainRouteConfig[] {
 }
 
 export function loadConfig(env = process.env): AppConfig {
-  const callerPemPublicKeyPath = getRequiredString(env, 'CALLER_PEM_PUBLIC_KEY_PATH');
+  const callerPemPublicKey = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY');
+  const callerPemPublicKeyPath = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY_PATH');
   const callerPemPublicKeySha256 = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY_SHA256');
+  if (callerPemPublicKey) {
+    if (callerPemPublicKeyPath || callerPemPublicKeySha256) {
+      throw new Error('CALLER_PEM_PUBLIC_KEY cannot be combined with CALLER_PEM_PUBLIC_KEY_PATH or CALLER_PEM_PUBLIC_KEY_SHA256');
+    }
+  } else {
+    if (!callerPemPublicKeyPath) {
+      throw new Error('CALLER_PEM_PUBLIC_KEY or CALLER_PEM_PUBLIC_KEY_PATH is required');
+    }
+    if (isHttpsUrl(callerPemPublicKeyPath) && !callerPemPublicKeySha256) {
+      throw new Error('HTTPS PEM public key requires CALLER_PEM_PUBLIC_KEY_SHA256 pinning');
+    }
+  }
   const awsAccessKeyId = getOptionalString(env, 'AWS_ACCESS_KEY_ID') || '';
   const awsSecretAccessKey = getOptionalString(env, 'AWS_SECRET_ACCESS_KEY') || '';
   const awsSessionToken = getOptionalString(env, 'AWS_SESSION_TOKEN');
-  if (isHttpsUrl(callerPemPublicKeyPath) && !callerPemPublicKeySha256) {
-    throw new Error('CALLER_PEM_PUBLIC_KEY_SHA256 is required when CALLER_PEM_PUBLIC_KEY_PATH is an HTTPS URL');
-  }
   if (callerPemPublicKeySha256) {
     validateSha256Hex(callerPemPublicKeySha256, 'CALLER_PEM_PUBLIC_KEY_SHA256');
   }
@@ -158,6 +169,7 @@ export function loadConfig(env = process.env): AppConfig {
     awsSecretAccessKey,
     awsSessionToken,
     validatorKeyId: getRequiredString(env, 'KMS_KEY_ID_VALIDATOR'),
+    callerPemPublicKey,
     callerPemPublicKeyPath,
     callerPemPublicKeySha256,
     cexApiUrl: getRequiredString(env, 'CEX_API_URL'),

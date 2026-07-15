@@ -104,6 +104,20 @@ export async function readPemPublicKey(source: string, expectedSha256?: string):
   }
 }
 
+export function validateInlinePemPublicKey(value: string): string {
+  const pem = value.replace(/\\n/g, '\n').trim();
+  const content = requirePemContent('CALLER_PEM_PUBLIC_KEY', pem);
+  try {
+    createPublicKey({
+      key: content,
+      format: 'pem',
+    });
+  } catch (error) {
+    throw new Error(`Invalid CALLER_PEM_PUBLIC_KEY: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return content;
+}
+
 export function verifySignatureWithPem(message: string, signature: string, pemPublicKey: string): boolean {
   try {
     const publicKey = createPublicKey({

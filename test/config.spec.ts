@@ -16,6 +16,7 @@ describe('loadConfig', () => {
     const config = loadConfig(baseEnv());
 
     expect(config.callerPemPublicKeyPath).toBe('resources/relayer.pem');
+    expect(config.callerPemPublicKey).toBeUndefined();
     expect(config.callerPemPublicKeySha256).toBeUndefined();
     expect(config.adminBasicAuthPassword).toBe('admin-password');
     expect(config.chainConfigs).toContainEqual({
@@ -74,8 +75,37 @@ describe('loadConfig', () => {
     expect(() => loadConfig(baseEnv({
       CALLER_PEM_PUBLIC_KEY_PATH: 'https://cdn.example.com/relayer.pem',
     }))).toThrow(
-      'CALLER_PEM_PUBLIC_KEY_SHA256 is required when CALLER_PEM_PUBLIC_KEY_PATH is an HTTPS URL',
+      'HTTPS PEM public key requires CALLER_PEM_PUBLIC_KEY_SHA256 pinning',
     );
+  });
+
+  it('accepts an inline caller PEM without a path or pin', () => {
+    const config = loadConfig(baseEnv({
+      CALLER_PEM_PUBLIC_KEY: '-----BEGIN PUBLIC KEY-----\\ninline\\n-----END PUBLIC KEY-----',
+      CALLER_PEM_PUBLIC_KEY_PATH: undefined,
+    }));
+
+    expect(config.callerPemPublicKey).toBe('-----BEGIN PUBLIC KEY-----\\ninline\\n-----END PUBLIC KEY-----');
+    expect(config.callerPemPublicKeyPath).toBeUndefined();
+    expect(config.callerPemPublicKeySha256).toBeUndefined();
+  });
+
+  it('rejects inline caller PEM combined with path or pin', () => {
+    expect(() => loadConfig(baseEnv({
+      CALLER_PEM_PUBLIC_KEY: 'inline-pem',
+    }))).toThrow('CALLER_PEM_PUBLIC_KEY cannot be combined with CALLER_PEM_PUBLIC_KEY_PATH');
+
+    expect(() => loadConfig(baseEnv({
+      CALLER_PEM_PUBLIC_KEY: 'inline-pem',
+      CALLER_PEM_PUBLIC_KEY_PATH: undefined,
+      CALLER_PEM_PUBLIC_KEY_SHA256: 'a'.repeat(64),
+    }))).toThrow('CALLER_PEM_PUBLIC_KEY cannot be combined with CALLER_PEM_PUBLIC_KEY_PATH');
+  });
+
+  it('requires one caller PEM source', () => {
+    expect(() => loadConfig(baseEnv({
+      CALLER_PEM_PUBLIC_KEY_PATH: undefined,
+    }))).toThrow('CALLER_PEM_PUBLIC_KEY or CALLER_PEM_PUBLIC_KEY_PATH is required');
   });
 
   it('rejects malformed caller PEM SHA-256 pins', () => {

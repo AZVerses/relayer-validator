@@ -4,7 +4,12 @@ import fastify, { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } 
 import { AppConfig, ChainRouteConfig } from '../config';
 import { SigningService } from '../services/signing/service';
 import { signRequestSchema, SignRequest } from '../types/actions';
-import { buildSignedMessage, readPemPublicKey, verifySignatureWithPem } from '../services/http/signature';
+import {
+  buildSignedMessage,
+  readPemPublicKey,
+  validateInlinePemPublicKey,
+  verifySignatureWithPem,
+} from '../services/http/signature';
 import { RiskCheckError } from '../services/risk-check';
 import {
   RelayerForwarder,
@@ -148,10 +153,9 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
       },
     },
   });
-  const callerPemPublicKey = await readPemPublicKey(
-    config.callerPemPublicKeyPath,
-    config.callerPemPublicKeySha256,
-  );
+  const callerPemPublicKey = config.callerPemPublicKey
+    ? validateInlinePemPublicKey(config.callerPemPublicKey)
+    : await readPemPublicKey(config.callerPemPublicKeyPath!, config.callerPemPublicKeySha256);
   const pemFingerprint = sha256Prefix(callerPemPublicKey, 6);
   app.log.info({ pemFingerprint }, 'caller PEM loaded');
 
