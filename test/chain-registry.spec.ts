@@ -63,4 +63,16 @@ describe('admin web chain registry', () => {
     expect(() => parseChainConfigOverrides('[{"chainId":42161,"graphUrl":""}]'))
       .toThrow('vaultAddress must be a 0x-prefixed address');
   });
+
+  it('uses the built-in Arbitrum One RPC when an override omits rpcUrl', () => {
+    const chains = mergeChainConfigs([
+      {
+        chainId: 42161,
+        graphUrl: '',
+        vaultAddress: '0x949556cb8634F9a4a8504665C3d0D9d326c600b2',
+      },
+    ]);
+
+    expect(chains[0].rpcUrl).toBe('https://arbitrum-one-rpc.publicnode.com');
+  });
 });

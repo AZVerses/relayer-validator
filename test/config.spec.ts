@@ -18,6 +18,10 @@ describe('loadConfig', () => {
     expect(config.callerPemPublicKeyPath).toBe('resources/relayer.pem');
     expect(config.callerPemPublicKeySha256).toBeUndefined();
     expect(config.adminBasicAuthPassword).toBe('admin-password');
+    expect(config.chainConfigs).toContainEqual({
+      chainId: 42161,
+      rpcUrl: 'https://arbitrum-one-rpc.publicnode.com',
+    });
   });
 
   it('uses AWS default credentials when access key and secret key are both absent', () => {
@@ -108,14 +112,21 @@ describe('loadConfig', () => {
     ]);
   });
 
-  it('requires an explicit RPC URL for Arbitrum One', () => {
-    expect(() => loadConfig(baseEnv({
+  it('uses the built-in Arbitrum One RPC when rpcUrl is omitted', () => {
+    const config = loadConfig(baseEnv({
       CHAIN_CONFIGS: JSON.stringify([
         {
           chainId: 42161,
         },
       ]),
-    }))).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for chainId 42161');
+    }));
+
+    expect(config.chainConfigs).toEqual([
+      {
+        chainId: 42161,
+        rpcUrl: 'https://arbitrum-one-rpc.publicnode.com',
+      },
+    ]);
   });
 
   it('requires rpcUrl for custom chain ids', () => {

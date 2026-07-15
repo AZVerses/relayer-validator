@@ -362,15 +362,22 @@ describe('validator HTTP API', () => {
     }
   });
 
-  it('rejects Arbitrum One config when rpcUrl is omitted', async () => {
+  it('accepts Arbitrum One config when rpcUrl is omitted', async () => {
     const callerKeys = createCallerKeyPair();
-    expect(() => loadConfig({
+    const config = loadConfig({
       KMS_KEY_ID_VALIDATOR: 'validator-key',
       CALLER_PEM_PUBLIC_KEY_PATH: callerKeys.publicKeyPath,
       CEX_API_URL: 'https://cex.example.com',
       ADMIN_BASIC_AUTH_PASSWORD: 'test-admin-password',
       CHAIN_CONFIGS: JSON.stringify([{ chainId: 42161 }]),
-    })).toThrow('CHAIN_CONFIGS[0].rpcUrl is required for chainId 42161');
+    });
+
+    expect(config.chainConfigs).toEqual([
+      {
+        chainId: 42161,
+        rpcUrl: 'https://arbitrum-one-rpc.publicnode.com',
+      },
+    ]);
   });
 
   it('rejects custom chain RPC proxy at config load when rpcUrl is omitted', () => {

@@ -9,6 +9,7 @@ const BUILT_IN_CHAINS: BuiltInChainConfig[] = [
     relayerUrl: 'http://localhost:3000',
     validatorServiceUrl: 'http://localhost:3001',
     explorerUrl: 'https://arbiscan.io',
+    rpcUrl: 'https://arbitrum-one-rpc.publicnode.com',
     startBlock: 476067900,
   },
   {

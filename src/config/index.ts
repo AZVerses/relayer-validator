@@ -29,9 +29,14 @@ export interface ChainRouteConfig {
 }
 
 const builtInRpcUrlsByChainId = new Map<number, string>([
+  [42161, 'https://arbitrum-one-rpc.publicnode.com'],
   [421614, 'https://arbitrum-sepolia-rpc.publicnode.com'],
   [11155111, 'https://ethereum-sepolia-rpc.publicnode.com'],
 ]);
+
+function getBuiltInChainConfigs(): ChainRouteConfig[] {
+  return [...builtInRpcUrlsByChainId.entries()].map(([chainId, rpcUrl]) => ({ chainId, rpcUrl }));
+}
 
 function isHttpsUrl(value: string): boolean {
   return /^https:\/\//i.test(value);
@@ -83,7 +88,7 @@ function parseOptionalUrlField(item: Record<string, unknown>, index: number, key
 
 function parseChainRouteConfigs(raw: string | undefined): ChainRouteConfig[] {
   if (!raw?.trim()) {
-    return [];
+    return getBuiltInChainConfigs();
   }
 
   let parsed: unknown;
