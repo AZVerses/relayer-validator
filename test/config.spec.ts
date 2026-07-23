@@ -34,16 +34,16 @@ describe('loadConfig', () => {
     expect(config.awsSessionToken).toBeUndefined();
   });
 
-  it('resolves relative LOG_PATH from the validator project root', () => {
-    const config = loadConfig(baseEnv({ LOG_PATH: 'logs/validator.log' }));
+  it('resolves a relative LOG_PATH directory from the validator project root', () => {
+    const config = loadConfig(baseEnv({ LOG_PATH: 'logs' }));
 
-    expect(config.logPath).toBe(resolve(VALIDATOR_PROJECT_ROOT, 'logs/validator.log'));
+    expect(config.logPath).toBe(resolve(VALIDATOR_PROJECT_ROOT, 'logs'));
   });
 
-  it('preserves absolute LOG_PATH values', () => {
-    const config = loadConfig(baseEnv({ LOG_PATH: '/tmp/validator.log' }));
+  it('preserves absolute LOG_PATH directory values', () => {
+    const config = loadConfig(baseEnv({ LOG_PATH: '/tmp/validator-logs' }));
 
-    expect(config.logPath).toBe('/tmp/validator.log');
+    expect(config.logPath).toBe('/tmp/validator-logs');
   });
 
   it('accepts explicit AWS access key and secret key together', () => {
