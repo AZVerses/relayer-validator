@@ -1,9 +1,13 @@
 import 'dotenv/config';
+import { resolve } from 'path';
+
+export const VALIDATOR_PROJECT_ROOT = resolve(__dirname, '../..');
 
 export interface AppConfig {
   appHost: string;
   appPort: number;
   logLevel: string;
+  logPath?: string;
   awsRegion: string;
   awsAccessKeyId: string;
   awsSecretAccessKey: string;
@@ -132,6 +136,7 @@ export function loadConfig(env = process.env): AppConfig {
   const callerPemPublicKey = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY');
   const callerPemPublicKeyPath = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY_PATH');
   const callerPemPublicKeySha256 = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY_SHA256');
+  const configuredLogPath = getOptionalString(env, 'LOG_PATH');
   if (callerPemPublicKey) {
     if (callerPemPublicKeyPath || callerPemPublicKeySha256) {
       throw new Error('CALLER_PEM_PUBLIC_KEY cannot be combined with CALLER_PEM_PUBLIC_KEY_PATH or CALLER_PEM_PUBLIC_KEY_SHA256');
@@ -164,6 +169,7 @@ export function loadConfig(env = process.env): AppConfig {
     appHost: env.APP_HOST || '127.0.0.1',
     appPort: Number(env.APP_PORT || '3001'),
     logLevel: env.LOG_LEVEL || 'info',
+    logPath: configuredLogPath ? resolve(VALIDATOR_PROJECT_ROOT, configuredLogPath) : undefined,
     awsRegion: env.AWS_REGION || 'ap-northeast-1',
     awsAccessKeyId,
     awsSecretAccessKey,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { loadConfig } from '../src/config';
+import { resolve } from 'path';
+import { loadConfig, VALIDATOR_PROJECT_ROOT } from '../src/config';
 
 function baseEnv(overrides: Record<string, string | undefined> = {}) {
   return {
@@ -31,6 +32,18 @@ describe('loadConfig', () => {
     expect(config.awsAccessKeyId).toBe('');
     expect(config.awsSecretAccessKey).toBe('');
     expect(config.awsSessionToken).toBeUndefined();
+  });
+
+  it('resolves relative LOG_PATH from the validator project root', () => {
+    const config = loadConfig(baseEnv({ LOG_PATH: 'logs/validator.log' }));
+
+    expect(config.logPath).toBe(resolve(VALIDATOR_PROJECT_ROOT, 'logs/validator.log'));
+  });
+
+  it('preserves absolute LOG_PATH values', () => {
+    const config = loadConfig(baseEnv({ LOG_PATH: '/tmp/validator.log' }));
+
+    expect(config.logPath).toBe('/tmp/validator.log');
   });
 
   it('accepts explicit AWS access key and secret key together', () => {

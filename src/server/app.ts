@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import axios, { AxiosResponse, isAxiosError, Method } from 'axios';
 import fastify, { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AppConfig, ChainRouteConfig } from '../config';
+import { createLogger } from '../logging';
 import { SigningService } from '../services/signing/service';
 import { signRequestSchema, SignRequest } from '../types/actions';
 import {
@@ -135,24 +136,9 @@ export interface AppDeps {
 
 export async function buildApp({ config, signingService, relayerForwarder }: AppDeps): Promise<FastifyInstance> {
   const authenticateAdmin = createAdminAuthenticator(config.adminBasicAuthPassword ?? '');
-  const app = fastify({
-    logger: {
-      level: config.logLevel,
-      // Human-readable single-line output with ISO-8601 timestamps.
-      // Falls back to plain JSON if pino-pretty is unavailable
-      // (e.g. minimal build that strips devDeps).
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
-          ignore: 'pid,hostname',
-          singleLine: true,
-          messageFormat: '{reqId} {msg}',
-        },
-      },
-    },
-  });
+  const logger = createLogger(config);
+  const app = fastify({ logger: logger.options });
+  app.addHook('onClose', () => logger.close());
   const callerPemPublicKey = config.callerPemPublicKey
     ? validateInlinePemPublicKey(config.callerPemPublicKey)
     : await readPemPublicKey(config.callerPemPublicKeyPath!, config.callerPemPublicKeySha256);

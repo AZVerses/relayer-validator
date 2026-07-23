@@ -6,6 +6,7 @@ import { loadConfig } from '../config';
 import { AwsKmsValidatorSignerBackend } from '../services/kms/backend';
 import { SigningService } from '../services/signing/service';
 import { buildApp } from '../server/app';
+import { registerProcessErrorHandlers } from '../logging';
 import { SignRequest, signRequestSchema } from '../types/actions';
 
 export interface CliDeps {
@@ -77,7 +78,23 @@ Required environment:
         LOG_LEVEL: config.logLevel,
       }).signingService;
       const app = await buildApp({ config, signingService });
-      await app.listen({ host: config.appHost, port: config.appPort });
+      registerProcessErrorHandlers({
+        error: (message, ...optionalParams) => {
+          const error = optionalParams.find(value => value instanceof Error);
+          app.log.error(
+            error ? { err: error } : { details: optionalParams },
+            typeof message === 'string' ? message : String(message),
+          );
+        },
+        close: () => app.close(),
+      });
+      try {
+        await app.listen({ host: config.appHost, port: config.appPort });
+      } catch (error) {
+        app.log.error(error, 'validator startup failed');
+        await app.close();
+        throw error;
+      }
     });
 
   const sign = program.command('sign').description('sign a withdraw-related action and return JSON');

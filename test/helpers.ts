@@ -45,6 +45,7 @@ export function createTestConfig(): AppConfig {
     appHost: '127.0.0.1',
     appPort: 3001,
     logLevel: 'silent',
+    logPath: undefined,
     awsRegion: 'ap-northeast-1',
     awsAccessKeyId: 'test',
     awsSecretAccessKey: 'test',
