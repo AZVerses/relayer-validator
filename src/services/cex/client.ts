@@ -4,7 +4,7 @@ import { AppConfig } from '../../config';
 import { ValidatorSignerBackend } from '../kms/backend';
 import { buildSignedMessage } from '../http/signature';
 
-const VERIFY_PATH = '/az/api/relayer/withdraw/verify';
+const VERIFY_PATH = '/api/relayer/withdraw/verify';
 
 interface CexVerifyResponse {
   code: number;
@@ -27,7 +27,7 @@ export class CexRiskClient {
   /**
    * Hit CEX /verify for a single relayer-withdraw requestId. The endpoint
    * is GET with `requestId` as a query parameter (e.g.
-   * `GET /az/api/relayer/withdraw/verify?requestId=123`). The signed
+   * `GET /api/relayer/withdraw/verify?requestId=123`). The signed
    * message is built over `{ requestId }` so the verifier can rebuild
    * the same canonical string regardless of transport. Throws on
    * transport / parse failure so the caller can deny-by-default.
