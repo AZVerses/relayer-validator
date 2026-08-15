@@ -4,6 +4,10 @@ External signer service used by `az-vault-relayer` for withdraw-related vault ac
 
 ## What it does
 
+The service holds one of the signing keys in the AssetVault contract's registered validator
+set, and exists so that the relayer alone cannot move funds: a withdrawal action needs both
+the relayer's request and enough validator signatures to meet the contract's power threshold.
+
 - Validates incoming signing requests from the relayer and the admin web.
 - Runs the configured risk-check hook.
 - Builds the canonical vault digest and signs it with the validator's AWS KMS key.
