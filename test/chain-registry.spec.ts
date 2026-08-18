@@ -9,6 +9,7 @@ describe('admin web chain registry', () => {
         graphUrl: 'https://graph.example.com/subgraphs/name/az-vault',
         vaultAddress: '0x949556cb8634F9a4a8504665C3d0D9d326c600b2',
         rpcUrl: 'https://arb.example.com/rpc',
+        relayerUrl: 'https://arb-relayer.example.com',
       },
     ]);
 
@@ -16,7 +17,7 @@ describe('admin web chain registry', () => {
       {
         name: 'Arbitrum One',
         chainId: 42161,
-        relayerUrl: 'http://localhost:3000',
+        relayerUrl: 'https://arb-relayer.example.com',
         validatorServiceUrl: 'http://localhost:3001',
         graphUrl: 'https://graph.example.com/subgraphs/name/az-vault',
         explorerUrl: 'https://arbiscan.io',
@@ -57,6 +58,28 @@ describe('admin web chain registry', () => {
         vaultAddress: '0x949556cb8634F9a4a8504665C3d0D9d326c600b2',
       },
     ])).toThrow('unsupported chainId 1');
+  });
+
+  it('supports HashKey Chain when all deployment and routing metadata is configured', () => {
+    const [chain] = mergeChainConfigs([
+      {
+        chainId: 177,
+        name: 'HashKey Chain',
+        graphUrl: '',
+        vaultAddress: '0x1111111111111111111111111111111111111111',
+        explorerUrl: 'https://hashkey.blockscout.com',
+        rpcUrl: 'https://mainnet.hsk.xyz',
+        relayerUrl: 'https://hashkey-relayer.example.com',
+        startBlock: 123456,
+      },
+    ]);
+
+    expect(chain).toMatchObject({
+      chainId: 177,
+      relayerUrl: 'https://hashkey-relayer.example.com',
+      rpcUrl: 'https://mainnet.hsk.xyz',
+      startBlock: 123456,
+    });
   });
 
   it('validates CHAIN_CONFIGS JSON shape', () => {

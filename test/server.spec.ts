@@ -105,7 +105,7 @@ describe('validator HTTP API', () => {
     });
 
     expect(response.statusCode).toBe(503);
-    expect(response.json()).toEqual({ error: 'RELAYER_URL not configured' });
+    expect(response.json()).toEqual({ error: 'relayerUrl not configured for chain 42161' });
   });
 
   it('rejects request-withdraw on the admin route before signing', async () => {
@@ -280,7 +280,11 @@ describe('validator HTTP API', () => {
     const config = createTestConfig();
     const callerKeys = createCallerKeyPair();
     config.callerPemPublicKeyPath = callerKeys.publicKeyPath;
-    config.relayerUrl = 'http://127.0.0.1:1';
+    config.chainConfigs = [{
+      chainId: 42161,
+      rpcUrl: 'https://arbitrum-one-rpc.publicnode.com',
+      relayerUrl: 'http://127.0.0.1:1',
+    }];
     app = await buildApp({
       config,
       signingService: new SigningService(config, new InMemorySignerBackend()),
@@ -297,24 +301,26 @@ describe('validator HTTP API', () => {
     expect(response.body).not.toContain('127.0.0.1');
   });
 
-  it('proxies relayer globally and RPC requests by chainId', async () => {
+  it('proxies relayer and RPC requests by chainId', async () => {
     await app.close();
-    const relayer = await createJsonServer({ relayer: 'global' });
+    const relayerA = await createJsonServer({ relayer: 'a' });
+    const relayerB = await createJsonServer({ relayer: 'b' });
     const rpcA = await createJsonServer({ rpc: 'a' });
     const rpcB = await createJsonServer({ rpc: 'b' });
     try {
       const config = createTestConfig();
       const callerKeys = createCallerKeyPair();
       config.callerPemPublicKeyPath = callerKeys.publicKeyPath;
-      config.relayerUrl = relayer.url;
       config.chainConfigs = [
         {
           chainId: 42161,
           rpcUrl: rpcA.url,
+          relayerUrl: relayerA.url,
         },
         {
           chainId: 421614,
           rpcUrl: rpcB.url,
+          relayerUrl: relayerB.url,
         },
       ];
       app = await buildApp({
@@ -330,7 +336,7 @@ describe('validator HTTP API', () => {
       });
       expect(relayerResponse.statusCode).toBe(200);
       expect(relayerResponse.json()).toMatchObject({
-        relayer: 'global',
+        relayer: 'b',
         method: 'GET',
         url: '/api/public/withdraws?x=1',
         authorization: null,
@@ -367,7 +373,8 @@ describe('validator HTTP API', () => {
       });
     } finally {
       await Promise.all([
-        closeServer(relayer.server),
+        closeServer(relayerA.server),
+        closeServer(relayerB.server),
         closeServer(rpcA.server),
         closeServer(rpcB.server),
       ]);

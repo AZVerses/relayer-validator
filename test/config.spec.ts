@@ -127,32 +127,47 @@ describe('loadConfig', () => {
     }))).toThrow('CALLER_PEM_PUBLIC_KEY_SHA256 must be a 64-character hex string');
   });
 
-  it('parses global relayer URL and per-chain RPC URLs', () => {
+  it('parses per-chain relayer and RPC URLs', () => {
     const config = loadConfig(baseEnv({
-      RELAYER_URL: 'http://relayer:3000',
       CHAIN_CONFIGS: JSON.stringify([
         {
           chainId: 42161,
           rpcUrl: 'https://arb.example.com/rpc',
+          relayerUrl: 'http://arb-relayer:3000',
         },
         {
           chainId: 421614,
           rpcUrl: 'https://arb-sepolia.example.com/rpc',
+          relayerUrl: 'http://arb-sepolia-relayer:3000',
         },
       ]),
     }));
 
-    expect(config.relayerUrl).toBe('http://relayer:3000');
     expect(config.chainConfigs).toEqual([
       {
         chainId: 42161,
         rpcUrl: 'https://arb.example.com/rpc',
+        relayerUrl: 'http://arb-relayer:3000',
       },
       {
         chainId: 421614,
         rpcUrl: 'https://arb-sepolia.example.com/rpc',
+        relayerUrl: 'http://arb-sepolia-relayer:3000',
       },
     ]);
+  });
+
+  it('uses legacy RELAYER_URL as a per-chain migration fallback', () => {
+    const config = loadConfig(baseEnv({
+      RELAYER_URL: 'http://relayer:3000',
+      CHAIN_CONFIGS: JSON.stringify([{ chainId: 42161 }]),
+    }));
+
+    expect(config.chainConfigs).toEqual([{
+      chainId: 42161,
+      rpcUrl: 'https://arbitrum-one-rpc.publicnode.com',
+      relayerUrl: 'http://relayer:3000',
+    }]);
   });
 
   it('uses the built-in Arbitrum One RPC when rpcUrl is omitted', () => {

@@ -149,11 +149,11 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
   app.log.info({ validatorAddress: validator.address }, 'validator KMS address loaded');
 
   const forwardersByRelayerUrl = new Map<string, RelayerForwarder>();
-  function getForwarder(): RelayerForwarder | null {
+  function getForwarder(chainId: number): RelayerForwarder | null {
     if (relayerForwarder) {
       return relayerForwarder;
     }
-    const relayerUrl = config.relayerUrl;
+    const relayerUrl = findChainRouteConfig(config, chainId)?.relayerUrl;
     if (!relayerUrl) {
       return null;
     }
@@ -168,9 +168,9 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
 
   async function proxyToRelayer(request: FastifyRequest, reply: FastifyReply) {
     const chainId = getChainIdFromParams(request);
-    const relayerUrl = config.relayerUrl;
+    const relayerUrl = findChainRouteConfig(config, chainId)?.relayerUrl;
     if (!relayerUrl) {
-      return reply.status(502).send({ error: 'RELAYER_URL not configured' });
+      return reply.status(502).send({ error: `relayerUrl not configured for chain ${chainId}` });
     }
     const pathAndQuery = stripChainProxyPrefix(request.raw.url ?? request.url, chainId, 'api');
     if (!isAllowedRelayerProxyRequest(request.method, pathAndQuery)) {
@@ -336,9 +336,9 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
     }
 
     const signRequest = parsed.data as Exclude<SignRequest, { action: 'reject-rebalance-collection' }>;
-    const forwarder = getForwarder();
+    const forwarder = getForwarder(signRequest.chainId);
     if (!forwarder) {
-      return reply.status(503).send({ error: 'RELAYER_URL not configured' });
+      return reply.status(503).send({ error: `relayerUrl not configured for chain ${signRequest.chainId}` });
     }
     const collectionId = envelope.data.collectionId;
     if (collectionId !== undefined && signRequest.action !== 'rebalance-withdraw') {
@@ -365,9 +365,9 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
     if (!envelope.success) {
       return reply.status(400).send({ error: 'Invalid request', details: envelope.error.flatten() });
     }
-    const forwarder = getForwarder();
+    const forwarder = getForwarder(envelope.data.chainId);
     if (!forwarder) {
-      return reply.status(503).send({ error: 'RELAYER_URL not configured' });
+      return reply.status(503).send({ error: `relayerUrl not configured for chain ${envelope.data.chainId}` });
     }
 
     const signed = await signingService.sign({

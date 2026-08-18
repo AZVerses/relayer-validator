@@ -24,7 +24,7 @@ export function getChains(): ChainConfig[] {
 /**
  * Admin API base URL — always a same-origin path.
  * Dev: Vite proxy forwards to chain.relayerUrl.
- * Prod: nginx/validator service forwards to global RELAYER_URL.
+ * Prod: nginx/validator service forwards by CHAIN_CONFIGS[].relayerUrl.
  */
 export function getApiBase(chainId: number): string {
   return `/api/chain/${chainId}`

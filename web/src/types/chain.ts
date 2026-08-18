@@ -21,5 +21,6 @@ export interface ChainConfigOverride {
   name?: string
   explorerUrl?: string
   rpcUrl?: string
+  relayerUrl?: string
   startBlock?: number
 }

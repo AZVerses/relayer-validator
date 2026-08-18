@@ -19,18 +19,13 @@ export interface AppConfig {
   cexApiUrl: string;
   /** Existing Docker Basic Auth password, reused by Fastify admin routes. */
   adminBasicAuthPassword?: string;
-  /**
-   * Global relayer base URL used by the admin signing endpoint and admin
-   * web proxy (e.g. http://relayer:3000). Optional — admin forwarding
-   * returns 503 when unset.
-   */
-  relayerUrl?: string;
   chainConfigs: ChainRouteConfig[];
 }
 
 export interface ChainRouteConfig {
   chainId: number;
   rpcUrl: string;
+  relayerUrl?: string;
 }
 
 const builtInRpcUrlsByChainId = new Map<number, string>([
@@ -91,9 +86,11 @@ function parseOptionalUrlField(item: Record<string, unknown>, index: number, key
   return validateUrl(value.trim(), `CHAIN_CONFIGS[${index}].${key}`);
 }
 
-function parseChainRouteConfigs(raw: string | undefined): ChainRouteConfig[] {
+function parseChainRouteConfigs(raw: string | undefined, legacyRelayerUrl?: string): ChainRouteConfig[] {
   if (!raw?.trim()) {
-    return getBuiltInChainConfigs();
+    return getBuiltInChainConfigs().map(chain => (
+      legacyRelayerUrl ? { ...chain, relayerUrl: legacyRelayerUrl } : chain
+    ));
   }
 
   let parsed: unknown;
@@ -128,7 +125,12 @@ function parseChainRouteConfigs(raw: string | undefined): ChainRouteConfig[] {
       throw new Error(`CHAIN_CONFIGS[${index}].rpcUrl is required for chainId ${chainId}`);
     }
 
-    return { chainId, rpcUrl };
+    const relayerUrl = parseOptionalUrlField(record, index, 'relayerUrl') ?? legacyRelayerUrl;
+    return {
+      chainId,
+      rpcUrl,
+      ...(relayerUrl ? { relayerUrl } : {}),
+    };
   });
 }
 
@@ -137,6 +139,7 @@ export function loadConfig(env = process.env): AppConfig {
   const callerPemPublicKeyPath = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY_PATH');
   const callerPemPublicKeySha256 = getOptionalString(env, 'CALLER_PEM_PUBLIC_KEY_SHA256');
   const configuredLogPath = getOptionalString(env, 'LOG_PATH');
+  const legacyRelayerUrl = getOptionalString(env, 'RELAYER_URL');
   if (callerPemPublicKey) {
     if (callerPemPublicKeyPath || callerPemPublicKeySha256) {
       throw new Error('CALLER_PEM_PUBLIC_KEY cannot be combined with CALLER_PEM_PUBLIC_KEY_PATH or CALLER_PEM_PUBLIC_KEY_SHA256');
@@ -180,7 +183,6 @@ export function loadConfig(env = process.env): AppConfig {
     callerPemPublicKeySha256,
     cexApiUrl: getRequiredString(env, 'CEX_API_URL'),
     adminBasicAuthPassword: getOptionalString(env, 'ADMIN_BASIC_AUTH_PASSWORD'),
-    relayerUrl: env.RELAYER_URL?.trim() || undefined,
-    chainConfigs: parseChainRouteConfigs(env.CHAIN_CONFIGS),
+    chainConfigs: parseChainRouteConfigs(env.CHAIN_CONFIGS, legacyRelayerUrl),
   };
 }

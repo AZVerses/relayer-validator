@@ -61,7 +61,7 @@ function assertChainConfigOverride(value: unknown, index: number): asserts value
   if (typeof override.graphUrl !== 'string') {
     throw new Error(`CHAIN_CONFIGS[${index}].graphUrl must be a string`)
   }
-  for (const key of ['name', 'explorerUrl', 'rpcUrl'] as const) {
+  for (const key of ['name', 'explorerUrl', 'rpcUrl', 'relayerUrl'] as const) {
     assertOptionalString(override, key, index)
   }
   assertOptionalPositiveInteger(override, 'startBlock', index)
@@ -91,7 +91,7 @@ export function mergeChainConfigs(overrides: ChainConfigOverride[]): ChainConfig
   return overrides.map((override) => {
     const base = baseByChainId.get(override.chainId)
     if (!base && !hasFullChainConfigOverride(override)) {
-      throw new Error(`CHAIN_CONFIGS contains unsupported chainId ${override.chainId}; provide name, explorerUrl, rpcUrl, and startBlock to add a custom chain`)
+      throw new Error(`CHAIN_CONFIGS contains unsupported chainId ${override.chainId}; provide name, explorerUrl, rpcUrl, relayerUrl, and startBlock to add a custom chain`)
     }
     if (!override.rpcUrl && !base?.rpcUrl) {
       throw new Error(`CHAIN_CONFIGS requires rpcUrl for chainId ${override.chainId}`)
@@ -101,14 +101,14 @@ export function mergeChainConfigs(overrides: ChainConfigOverride[]): ChainConfig
       ...(base ?? {
         name: override.name!,
         chainId: override.chainId,
-        relayerUrl: 'http://localhost:3000',
+        relayerUrl: override.relayerUrl!,
         validatorServiceUrl: 'http://localhost:3001',
         explorerUrl: override.explorerUrl!,
         rpcUrl: override.rpcUrl!,
         startBlock: override.startBlock!,
       }),
       name: override.name ?? base?.name ?? override.name!,
-      relayerUrl: base?.relayerUrl ?? 'http://localhost:3000',
+      relayerUrl: override.relayerUrl ?? base?.relayerUrl ?? override.relayerUrl!,
       validatorServiceUrl: base?.validatorServiceUrl ?? 'http://localhost:3001',
       explorerUrl: override.explorerUrl ?? base?.explorerUrl ?? override.explorerUrl!,
       rpcUrl: override.rpcUrl ?? base!.rpcUrl!,
@@ -124,6 +124,7 @@ function hasFullChainConfigOverride(override: ChainConfigOverride): boolean {
     override.name &&
     override.explorerUrl &&
     override.rpcUrl &&
+    override.relayerUrl &&
     override.startBlock !== undefined,
   )
 }
