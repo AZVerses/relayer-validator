@@ -3,7 +3,7 @@ import { RiskCheckError, riskCheck } from '../risk-check';
 import { buildDigest } from './digests';
 import { SignedPayload, SignRequest } from '../../types/actions';
 import { ValidatorSignerBackend } from '../kms/backend';
-import { CexRiskClient } from '../cex/client';
+import { CexRiskClient, CexRiskLogger } from '../cex/client';
 
 export interface ValidatorInfo {
   address: string;
@@ -19,6 +19,10 @@ export class SigningService {
     cexRiskClient?: CexRiskClient,
   ) {
     this.cexRiskClient = cexRiskClient ?? new CexRiskClient(config, backend);
+  }
+
+  setLogger(logger: CexRiskLogger): void {
+    this.cexRiskClient.setLogger(logger);
   }
 
   async getValidator(): Promise<ValidatorInfo> {

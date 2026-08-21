@@ -139,6 +139,9 @@ export async function buildApp({ config, signingService, relayerForwarder }: App
   const logger = createLogger(config);
   const app = fastify({ logger: logger.options });
   app.addHook('onClose', () => logger.close());
+  // SigningService is created before Fastify in the CLI bootstrap. Attach the
+  // application logger here so outbound CEX risk requests use the same sinks.
+  signingService.setLogger(app.log);
   const callerPemPublicKey = config.callerPemPublicKey
     ? validateInlinePemPublicKey(config.callerPemPublicKey)
     : await readPemPublicKey(config.callerPemPublicKeyPath!, config.callerPemPublicKeySha256);

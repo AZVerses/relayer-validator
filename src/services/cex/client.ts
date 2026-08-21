@@ -17,12 +17,21 @@ export interface CexVerifyResult {
   raw: CexVerifyResponse;
 }
 
+export interface CexRiskLogger {
+  info(bindings: Record<string, unknown>, message: string): void;
+}
+
 export class CexRiskClient {
   constructor(
     private readonly config: AppConfig,
     private readonly backend: ValidatorSignerBackend,
     private readonly httpClient: AxiosInstance = axios.create({ timeout: 10_000 }),
+    private logger?: CexRiskLogger,
   ) {}
+
+  setLogger(logger: CexRiskLogger): void {
+    this.logger = logger;
+  }
 
   /**
    * Hit CEX /verify for a single relayer-withdraw requestId. The endpoint
@@ -36,6 +45,12 @@ export class CexRiskClient {
     const url = `${this.config.cexApiUrl.replace(/\/$/, '')}${VERIFY_PATH}`;
     const signedPayload = { requestId };
     const headers = await this.buildSignedHeaders(signedPayload);
+    const params = { requestId };
+
+    // Use Axios's own query serializer so the diagnostic URL exactly matches
+    // the request below, including escaping of the requestId query parameter.
+    const requestUrl = axios.getUri({ url, params });
+    this.logger?.info({ url: requestUrl }, 'CEX risk verify request');
 
     let response;
     try {
@@ -43,7 +58,7 @@ export class CexRiskClient {
         url,
         method: 'GET',
         headers,
-        params: { requestId },
+        params,
       });
     } catch (error) {
       const detail = isAxiosError(error) ? error.message : String(error);

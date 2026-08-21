@@ -12,7 +12,8 @@ describe('CexRiskClient', () => {
       data: { code: 0, msg: 'success', data: true },
     });
     const httpClient = { request } as unknown as AxiosInstance;
-    const client = new CexRiskClient(config, new InMemorySignerBackend(), httpClient);
+    const logger = { info: vi.fn() };
+    const client = new CexRiskClient(config, new InMemorySignerBackend(), httpClient, logger);
 
     await expect(client.checkSingleWithdrawRisk('42')).resolves.toMatchObject({ allowed: true });
 
@@ -21,5 +22,9 @@ describe('CexRiskClient', () => {
       method: 'GET',
       params: { requestId: '42' },
     }));
+    expect(logger.info).toHaveBeenCalledWith(
+      { url: 'https://cex.example.com/risk/api/relayer/withdraw/verify?requestId=42' },
+      'CEX risk verify request',
+    );
   });
 });
