@@ -118,6 +118,7 @@ function isAllowedRelayerProxyRequest(method: string, pathAndQuery: string): boo
     || path === '/api/public/withdraws'
     || path === '/api/public/vault-roles'
     || path === '/api/public/validator-sets'
+    || path === '/api/public/supported-tokens'
     || path === '/api/signature-collections'
     || path === '/api/signature-collections/active'
     || /^\/api\/signature-collections\/[1-9][0-9]*$/.test(path);

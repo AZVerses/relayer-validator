@@ -342,7 +342,7 @@ describe('validator HTTP API', () => {
         authorization: null,
       });
 
-      for (const path of ['/api/public/vault-roles', '/api/public/validator-sets']) {
+      for (const path of ['/api/public/vault-roles', '/api/public/validator-sets', '/api/public/supported-tokens']) {
         const vaultStateResponse = await app.inject({
           method: 'GET',
           url: `/api/chain/421614${path}`,
