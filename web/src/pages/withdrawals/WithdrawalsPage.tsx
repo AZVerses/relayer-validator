@@ -24,6 +24,7 @@ import { TokenSelect } from '../../components/TokenSelect'
 import { TimeRangeFilter, type TimeRangeValue } from '../../components/TimeRangeSelect'
 import { formatDecimalAmount, formatUnixSeconds } from '../../utils/format'
 import { deriveWithdrawalActionFlags } from '../../utils/withdrawal-actions'
+import { runWithdrawalAction } from '../../utils/withdrawal-action-runner'
 import type { Withdrawal, WithdrawalFilters } from '../../types/withdrawal'
 
 function BoolIcon({ value }: { value: boolean }) {
@@ -107,16 +108,6 @@ export function WithdrawalsPage() {
     })
   }
 
-  const refreshAfterAction = async (ids: string[]) => {
-    markRowsLoading(ids)
-    await refreshWithdrawals()
-    window.setTimeout(backgroundRefreshWithdrawals, 5_000)
-    window.setTimeout(() => {
-      backgroundRefreshWithdrawals()
-      clearRowsLoading(ids)
-    }, 15_000)
-  }
-
   const fetchFreshPage = async () => {
     const fresh = await fetchWithdrawals(chainId, filters)
     queryClient.setQueryData(withdrawalQueryKey, fresh)
@@ -150,77 +141,68 @@ export function WithdrawalsPage() {
     ids: string[],
     action: 'flush' | 'pause' | 'unpause' | 'execute',
   ) => {
-    markRowsLoading(ids)
-    try {
-      const fresh = await fetchFreshPage()
-      const rowsById = new Map((fresh.items ?? []).map((item) => [item.withdrawId, item]))
-      const unavailable = ids
-        .map((id) => {
-          const row = rowsById.get(id)
-          if (!row) return `${id}: no longer visible in current filters`
-          const reason = getUnavailableReason(row, action)
-          return reason ? `${id}: ${reason}` : null
-        })
-        .filter((item): item is string => item !== null)
+    const fresh = await fetchFreshPage()
+    const rowsById = new Map((fresh.items ?? []).map((item) => [item.withdrawId, item]))
+    const unavailable = ids
+      .map((id) => {
+        const row = rowsById.get(id)
+        if (!row) return `${id}: no longer visible in current filters`
+        const reason = getUnavailableReason(row, action)
+        return reason ? `${id}: ${reason}` : null
+      })
+      .filter((item): item is string => item !== null)
 
-      if (unavailable.length > 0) {
-        message.warning(`Refresh required: ${unavailable.slice(0, 3).join('; ')}`)
-        await refreshWithdrawals()
-        return false
-      }
-      return true
-    } catch (e) {
-      message.error(e instanceof Error ? e.message : 'Failed to refresh latest withdrawal state')
+    if (unavailable.length > 0) {
+      message.warning(`Refresh required: ${unavailable.slice(0, 3).join('; ')}`)
+      await refreshWithdrawals()
       return false
-    } finally {
-      clearRowsLoading(ids)
     }
+    return true
   }
 
-  const runRowAction = async (
-    id: string,
+  const runAction = async (
+    ids: string[],
     action: 'flush' | 'pause' | 'unpause' | 'execute',
-    mutate: (id: string) => void,
+    submit: () => Promise<unknown>,
+    successMessage: string,
   ) => {
-    if (await precheckAction([id], action)) {
-      mutate(id)
+    try {
+      const submitted = await runWithdrawalAction({
+        ids,
+        markLoading: markRowsLoading,
+        clearLoading: clearRowsLoading,
+        precheck: () => precheckAction(ids, action),
+        submit,
+      })
+      if (!submitted) return
+      message.success(successMessage)
+      setSelectedRowKeys([])
+      backgroundRefreshWithdrawals()
+      window.setTimeout(backgroundRefreshWithdrawals, 5_000)
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Withdrawal action failed')
     }
   }
 
   const runFlushAction = async (ids: string[]) => {
     if (ids.length === 0) return
-    if (await precheckAction(ids, 'flush')) {
-      flushMut.mutate(ids)
-    }
-  }
-
-  const invalidate = async (ids: string[]) => {
-    await refreshAfterAction(ids)
-    setSelectedRowKeys([])
+    await runAction(ids, 'flush', () => flushMut.mutateAsync(ids), 'Flush submitted')
   }
 
   const pauseMut = useMutation({
     mutationFn: (id: string) => pauseWithdrawal(chainId, id),
-    onSuccess: async (_, id) => { message.success('Paused'); await refreshAfterAction([id]) },
-    onError: (e) => message.error(e instanceof Error ? e.message : 'Failed'),
   })
 
   const unpauseMut = useMutation({
     mutationFn: (id: string) => unpauseWithdrawal(chainId, id),
-    onSuccess: async (_, id) => { message.success('Unpaused'); await refreshAfterAction([id]) },
-    onError: (e) => message.error(e instanceof Error ? e.message : 'Failed'),
   })
 
   const executeMut = useMutation({
     mutationFn: (id: string) => executeWithdrawal(chainId, id),
-    onSuccess: async (_, id) => { message.success('Execute submitted'); await refreshAfterAction([id]) },
-    onError: (e) => message.error(e instanceof Error ? e.message : 'Failed'),
   })
 
   const flushMut = useMutation({
     mutationFn: (ids: string[]) => flushWithdrawals(chainId, ids),
-    onSuccess: async (_, ids) => { message.success('Flush submitted'); await invalidate(ids) },
-    onError: (e) => message.error(e instanceof Error ? e.message : 'Failed'),
   })
 
   const flushableItems = data?.items?.filter((w) => deriveWithdrawalActionFlags(w, challengePeriod).canFlush) ?? []
@@ -368,28 +350,28 @@ export function WithdrawalsPage() {
         return (
           <Space size={4}>
             {flags.canFlush && (
-              <Popconfirm title="Flush this withdrawal?" onConfirm={() => runRowAction(record.withdrawId, 'flush', (id) => flushMut.mutate([id]))}>
+              <Popconfirm title="Flush this withdrawal?" onConfirm={() => runFlushAction([record.withdrawId])}>
                 <Button size="small" style={actionButtonStyles.flush}>
                   Flush
                 </Button>
               </Popconfirm>
             )}
             {flags.canPause && (
-              <Popconfirm title="Pause this withdrawal?" onConfirm={() => runRowAction(record.withdrawId, 'pause', pauseMut.mutate)}>
+              <Popconfirm title="Pause this withdrawal?" onConfirm={() => runAction([record.withdrawId], 'pause', () => pauseMut.mutateAsync(record.withdrawId), 'Paused')}>
                 <Button size="small" style={actionButtonStyles.pause}>
                   Pause
                 </Button>
               </Popconfirm>
             )}
             {flags.canUnpause && (
-              <Popconfirm title="Unpause this withdrawal?" onConfirm={() => runRowAction(record.withdrawId, 'unpause', unpauseMut.mutate)}>
+              <Popconfirm title="Unpause this withdrawal?" onConfirm={() => runAction([record.withdrawId], 'unpause', () => unpauseMut.mutateAsync(record.withdrawId), 'Unpaused')}>
                 <Button size="small" style={actionButtonStyles.unpause}>
                   Unpause
                 </Button>
               </Popconfirm>
             )}
             {flags.canExecute && (
-              <Popconfirm title="Execute this withdrawal? (challenge period expired)" onConfirm={() => runRowAction(record.withdrawId, 'execute', executeMut.mutate)}>
+              <Popconfirm title="Execute this withdrawal? (challenge period expired)" onConfirm={() => runAction([record.withdrawId], 'execute', () => executeMut.mutateAsync(record.withdrawId), 'Execute submitted')}>
                 <Button size="small" style={actionButtonStyles.execute}>
                   Execute
                 </Button>
@@ -411,14 +393,21 @@ export function WithdrawalsPage() {
               title={`Flush ${selectedRowKeys.length} withdrawal(s)?`}
               onConfirm={() => runFlushAction(selectedRowKeys)}
             >
-              <Button type="primary" size="small" loading={flushMut.isPending}>
+              <Button
+                type="primary"
+                size="small"
+                loading={flushMut.isPending || selectedRowKeys.some((id) => loadingRows.has(id))}
+              >
                 Flush Selected ({selectedRowKeys.length})
               </Button>
             </Popconfirm>
           )}
           {flushableItems.length > 0 && (
             <Popconfirm title={`Flush all ${flushableItems.length} unexpired unpaused withdrawal(s)?`} onConfirm={handleFlushAll}>
-              <Button size="small" loading={flushMut.isPending}>
+              <Button
+                size="small"
+                loading={flushMut.isPending || flushableItems.some((item) => loadingRows.has(item.withdrawId))}
+              >
                 Flush All Unexpired Unpaused
               </Button>
             </Popconfirm>
