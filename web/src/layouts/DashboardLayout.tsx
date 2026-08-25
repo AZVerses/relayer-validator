@@ -5,15 +5,43 @@ import {
   UploadOutlined,
   SwapOutlined,
 } from '@ant-design/icons'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { ChainSelector } from '../components/ChainSelector'
 import { ValidatorBadge } from '../components/ValidatorBadge'
+import { useChainStore } from '../stores/chain'
+import { resolveSelectedChainId } from '../utils/chain-selection'
 
 const { Header, Sider, Content } = Layout
 
 export function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { chains, selectedChainId, selectChain } = useChainStore()
+  const rawChainId = searchParams.get('chain')
+  const urlChainId = resolveSelectedChainId(chains, rawChainId)
+
+  useEffect(() => {
+    if (selectedChainId !== urlChainId) {
+      selectChain(urlChainId)
+    }
+    if (rawChainId !== String(urlChainId)) {
+      const next = new URLSearchParams(location.search)
+      next.set('chain', String(urlChainId))
+      setSearchParams(next, { replace: true })
+    }
+  }, [location.search, rawChainId, selectChain, selectedChainId, setSearchParams, urlChainId])
+
+  const handleChainChange = (chainId: number) => {
+    if (!chains.some((chain) => chain.chainId === chainId)) {
+      throw new Error(`Chain ${chainId} not found`)
+    }
+    selectChain(chainId)
+    const next = new URLSearchParams(location.search)
+    next.set('chain', String(chainId))
+    setSearchParams(next)
+  }
 
   const menuItems = [
     { key: '/', icon: <AppstoreOutlined />, label: 'Overview' },
@@ -55,7 +83,7 @@ export function DashboardLayout() {
           theme="dark"
           selectedKeys={[location.pathname]}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => navigate({ pathname: key, search: location.search })}
           style={{ border: 'none', padding: '0 8px' }}
         />
       </Sider>
@@ -71,7 +99,7 @@ export function DashboardLayout() {
             lineHeight: '56px',
           }}
         >
-          <ChainSelector />
+          <ChainSelector onChange={handleChainChange} />
           <Space size={12}>
             <ValidatorBadge />
           </Space>

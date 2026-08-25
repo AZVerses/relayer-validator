@@ -1,13 +1,17 @@
 import { Select } from 'antd'
 import { useChainStore } from '../stores/chain'
 
-export function ChainSelector() {
-  const { chains, selectedChainId, selectChain } = useChainStore()
+interface ChainSelectorProps {
+  onChange: (chainId: number) => void
+}
+
+export function ChainSelector({ onChange }: ChainSelectorProps) {
+  const { chains, selectedChainId } = useChainStore()
 
   return (
     <Select
       value={selectedChainId}
-      onChange={selectChain}
+      onChange={onChange}
       variant="borderless"
       style={{ minWidth: 180 }}
       options={chains.map((c) => ({

@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { OverviewPage } from './pages/overview/OverviewPage'
 import { DepositsPage } from './pages/deposits/DepositsPage'
@@ -16,8 +16,13 @@ const router = createBrowserRouter([
       { path: 'rebalance', element: <RebalancePage /> },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <RootRedirect /> },
 ])
+
+function RootRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: '/', search }} replace />
+}
 
 export function App() {
   return <RouterProvider router={router} />
