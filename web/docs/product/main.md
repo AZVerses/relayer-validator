@@ -1,70 +1,45 @@
-Web 后台系统
-- 用户系统
-  - 登陆
-    - 登入系统：基于钱包私钥登入，以后可以对接Bot
-    - v1: mail + 2FA
-    - validator 需要绑定钱包地址
-      - v1: 直接超级 admin 指定其某个 validator 用户对应的钱包地址
-  - 权限
-    - 【v2】普通用户
-      - 查看所有后台数据
-    - validator
-      - 修改 pending withdraw 状态：flush / reset hot amount 水位 / pause / unpause  / ...
-      - rebalance发起 / 同意权限
-    - 超级 admin (写死)
-      - 可以设置任何用户权限，onboard 用户的时候，先给用户 email 加白，用户再登陆
-- Chain Assets Overview
-  - 查看所有支持的链上的金库合约概况，包括
-    - Assets 余额 overview
-    - deposits/withdrawals 数量 overview
-    - Active validator sets
-    - 所有的链上多签钱包列表，以及对应权限
-    - ...
+# Validator Admin Web
 
-以下信息都是按链维度的，用户可以在 dashboard 上方选择某条链 ⬇️👇
-- 查看所有用户出入金信息，包括
-  - 按照不同维度查询
-    - Token
-    - User address
-    - chain ID
-    - 时间范围
-  - Deposits 历史
-    - ID
-    - Amount
-    - Token
-    - User address
-    - Chain ID
-    - timestamp
-    - Transaction Hash：附上 explorer link
-    - 链上 confirm 状态：unconfirmed / confirming / confirmed
-    - Type: wallet 地址入金 / 邮箱地址入金
-  - Withdraw 历史
-    - ID
-    - Amount
-    - Token 
-    - User address
-    - chain id
-    - Fee
-    - pending 状态
-    - pause 状态
-    - Executed 状态
-    - Transaction Hash：附上 explorer link
-    - 链上 confirm 状态：unconfirmed / confirming / confirmed
-    - Challenge 过期时间
-- 查看合约的全局信息，包括
-  - 链上合约整体情况
-    - 支持的 Token 列表，challenge period,
-    - 每个 token 的 hot amount 水位
-    - 每个 token 对应的配置：refill rate 等
-    - 每个 token 在合约的 balance
-  - Validators 信息
-    - validator地址
-    - required power, validator power
-- 【Validator权限】控制 withdraw 状态，每一笔 pending 后有快速操作按钮，包括
-  - unexpired + unpaused: 显示 Flush / Pause 文案按钮
-  - unexpired + paused: 只显示 Unpause 文案按钮
-  - expired + unpaused: 只显示 Execute 文案按钮
-  - expired + paused: 只显示 Unpause 文案按钮
-  - Flush pending withdraw: 可以 flush 一个或者多个 unexpired + unpaused withdraw，1个approve即可
-  - Reset hot amount:  可以 reset 一个或者多个 token 的 hot amount 水位，1个approve即可
-  - 可以由任何一个 validator 发起 approve 后，直接调用 admin console 的接口
+## 当前范围
+
+Admin Web 是多链 Vault 的运营控制台。当前认证边界是部署层 Nginx Basic Auth，并由
+Fastify 对写接口二次校验；系统没有 email 登录、2FA、用户管理或应用内角色功能。
+
+所有页面按链展示。当前链写入 URL `?chain=<chainId>`，刷新、浏览器前进后退和侧栏跳转
+不会回到错误链；没有合法参数时默认选择已配置的 Arbitrum One。
+
+## 页面
+
+- Overview：Vault 地址、暂停状态、challenge period、rebalance receiver、全部 Vault roles、
+  支持 token、token 余额/限额/refill 状态、validator sets 和 validator power。
+- Deposits：按 token、用户地址和时间过滤充值记录，展示金额、确认状态、时间和交易链接。
+- Withdrawals：按 token、用户地址、时间、pending/paused 状态过滤，展示费用、执行状态、
+  challenge 到期时间和交易链接。
+- Rebalance：创建、参与或拒绝 rebalance signature collection，展示投票 power、状态、交易
+  hash 和失败信息。
+
+Deposits、withdrawals 和 Vault roles 来自所选链的 relayer。`graphUrl` 非空时 token 和
+validator sets 来自 The Graph；为空时从 relayer fallback 读取。Vault 基础状态和 token
+metadata 通过所选链 RPC 实时读取。
+
+## Withdrawal 操作
+
+| Pending withdrawal 状态 | 可用按钮 |
+| --- | --- |
+| 未过期、未暂停 | `Flush`, `Pause` |
+| 未过期、已暂停 | `Unpause` |
+| 已过期、未暂停 | `Execute` |
+| 已过期、已暂停 | `Unpause` |
+
+Flush 支持单笔、选择多笔和 flush all。确认操作后相关行立即进入 loading，直到 relayer 返回
+已上链交易结果；成功和失败都会解除，列表在后台刷新，不使用固定时间假 loading。
+
+一次 Admin approve 只提供发起 validator 的预签名，不代表绕过 quorum。Relayer 仍会验证
+digest/validator/chain/vault，并按 Vault validator threshold 收集其余签名后才提交交易。
+Admin Web 不能创建新的 user withdrawal；新提现只能进入 CEX 签名的 relayer API。
+
+## 部署边界
+
+生产使用父目录 validator 单镜像，由同一个 origin 提供 SPA、validator API、relayer/RPC
+proxy 和 Admin write forwarding。Standalone web-only Compose 仅用于本地集成，不承担生产
+Basic Auth 配置。

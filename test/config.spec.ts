@@ -205,4 +205,25 @@ describe('loadConfig', () => {
       ]),
     }))).toThrow('CHAIN_CONFIGS must not contain duplicate chainId 42161');
   });
+
+  it('rejects unknown shared CHAIN_CONFIGS fields', () => {
+    expect(() => loadConfig(baseEnv({
+      CHAIN_CONFIGS: JSON.stringify([
+        { chainId: 42161, rpcURL: 'https://arb.example.com/rpc' },
+      ]),
+    }))).toThrow('CHAIN_CONFIGS[0].rpcURL is not supported');
+  });
+
+  it('accepts relayer-only fields in a shared CHAIN_CONFIGS payload', () => {
+    const config = loadConfig(baseEnv({
+      CHAIN_CONFIGS: JSON.stringify([{
+        chainId: 42161,
+        rpcUrls: ['https://primary.example/rpc', 'https://backup.example/rpc'],
+        startBlock: 123,
+        scanBlockBatchSize: 200,
+      }]),
+    }));
+
+    expect(config.chainConfigs[0].rpcUrl).toBe('https://arbitrum-one-rpc.publicnode.com');
+  });
 });

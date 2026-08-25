@@ -11,7 +11,9 @@ the relayer's request and enough validator signatures to meet the contract's pow
 - Validates incoming signing requests from the relayer and the admin web.
 - Runs the configured risk-check hook.
 - Builds the canonical vault digest and signs it with the validator's AWS KMS key.
-- Returns the validator address, signature, and digest. Never submits on-chain.
+- Returns the validator address, signature, and digest. The validator never holds an operator
+  transaction key; Admin routes forward the signed action to the selected relayer, which submits
+  and waits for the chain receipt.
 
 ## API
 
@@ -20,8 +22,8 @@ the relayer's request and enough validator signatures to meet the contract's pow
 | `GET`  | `/health` | Liveness. |
 | `GET`  | `/validator` | Returns `{ validatorAddress }`. |
 | `POST` | `/sign` | Sign a relayer-issued vault action. Caller must include `x-signature`, `x-timestamp`, `x-nonce` headers. |
-| `POST` | `/admin/sign-withdraw-operation` | Basic-authenticated sign + forward for existing-withdrawal admin actions and rebalance. It rejects `request-withdraw`. Returns 503 if `RELAYER_URL` is not set. |
-| `POST` | `/admin/sign-rebalance-reject` | Basic-authenticated sign + forward for a rebalance reject. Returns 503 if `RELAYER_URL` is not set. |
+| `POST` | `/admin/sign-withdraw-operation` | Basic-authenticated sign + forward for existing-withdrawal admin actions and rebalance. It rejects `request-withdraw`. Returns 503 when the selected chain has no relayer route. |
+| `POST` | `/admin/sign-rebalance-reject` | Basic-authenticated sign + forward for a rebalance reject. Returns 503 when the selected chain has no relayer route. |
 
 Supported `/sign` actions: `request-withdraw`, `batch-flush-withdrawals`, `batch-toggle-pending-withdrawal`, `execute-pending-withdrawal`, `batch-reset-withdraw-hot-amount`, `rebalance-withdraw`, `reject-rebalance-collection`.
 
@@ -37,13 +39,13 @@ below is just enough to get the container booting:
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `KMS_KEY_ID_VALIDATOR` | yes | KMS key the validator signs with. |
-| `CALLER_PEM_PUBLIC_KEY_PATH` | yes | Path on disk or `https://` URL of the relayer's PEM public key. |
+| `CALLER_PEM_PUBLIC_KEY` / `CALLER_PEM_PUBLIC_KEY_PATH` | exactly one | Inline relayer PEM, or a local/HTTPS path to it. |
 | `CALLER_PEM_PUBLIC_KEY_SHA256` | required for HTTPS PEM URLs | SHA-256 hex digest of the normalized relayer PEM content. Optional but recommended for local files. |
 | `CEX_API_URL` | yes | CEX risk service base URL; `/sign` hits `${CEX_API_URL}/az/api/relayer/withdraw/verify?requestId=<id>`. |
 | `AWS_REGION` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | yes when not on AWS infra | KMS credentials. Drop the access keys if running on an EC2/EKS/Fargate role. |
-| `RELAYER_URL` | yes for `/admin/*` and SPA relayer proxy | Global relayer base URL including scheme and port. |
+| `RELAYER_URL` | legacy fallback | Used only when a `CHAIN_CONFIGS` item omits `relayerUrl`. |
 | `ADMIN_BASIC_AUTH_PASSWORD` | yes when serving HTTP | Password enforced by both nginx and Fastify on `/admin/*`. Username is hardcoded `admin`. |
-| `CHAIN_CONFIGS` | yes | JSON array of per-chain `{ chainId, vaultAddress, graphUrl, rpcUrl }` overrides. `rpcUrl` is required for Arbitrum One; relayer and validator service URLs are global. |
+| `CHAIN_CONFIGS` | yes for the bundled Admin SPA | JSON array of per-chain deployment and routing config. `vaultAddress` and `graphUrl` are required; built-in chains may omit `rpcUrl`; prefer per-chain `relayerUrl`. Known relayer-only fields are ignored; other unknown fields fail startup. |
 
 ## Run with Docker (recommended)
 
@@ -88,9 +90,8 @@ KMS_KEY_ID_VALIDATOR=...
 CALLER_PEM_PUBLIC_KEY_PATH=resources/relayer.pem
 CALLER_PEM_PUBLIC_KEY_SHA256=
 CEX_API_URL=https://cex.example.com
-RELAYER_URL=http://relayer:3000
 ADMIN_BASIC_AUTH_PASSWORD=replace-with-a-real-password
-CHAIN_CONFIGS=[{"chainId":42161,"vaultAddress":"0x949556cb8634F9a4a8504665C3d0D9d326c600b2","graphUrl":"","rpcUrl":"https://your-arbitrum-rpc.example"}]
+CHAIN_CONFIGS=[{"chainId":42161,"vaultAddress":"0x949556cb8634F9a4a8504665C3d0D9d326c600b2","graphUrl":"","rpcUrl":"https://your-arbitrum-rpc.example","relayerUrl":"http://arbitrum-relayer:3000"}]
 ```
 
 ## Run locally (no Docker)
@@ -122,9 +123,16 @@ npm run dev          # listens on http://localhost:5173
 
 The SPA dev server proxies `/api/chain/*`, `/rpc/chain/*`, and the exact
 validator paths `/validator` and `/admin/*` to the URLs from the built-in
-chain registry merged with `CHAIN_CONFIGS`. The
+chain registry merged with `CHAIN_CONFIGS`. Local dev therefore needs each chain's
+`relayerUrl`; built-in chains can supply the RPC default. The
 validator service must already be running for write operations to
 work end-to-end.
+
+The selected chain is stored as `?chain=<chainId>`; missing or invalid values default to
+Arbitrum One when configured. Deposits, withdrawals, and Vault roles come from the selected
+relayer. Tokens and validator sets use `graphUrl` when non-empty and the relayer fallback when it
+is empty. Flush, pause, unpause, and execute show loading until the relayer returns the mined
+transaction response.
 
 ## CLI
 

@@ -84,6 +84,25 @@ describe('admin web chain registry', () => {
       .toThrow('vaultAddress must be a 0x-prefixed address');
   });
 
+  it('rejects unknown CHAIN_CONFIGS fields', () => {
+    expect(() => parseChainConfigOverrides('[{"chainId":42161,"vaultAddress":"0x949556cb8634F9a4a8504665C3d0D9d326c600b2","graphUrl":"","graphEnabled":false}]'))
+      .toThrow('CHAIN_CONFIGS[0].graphEnabled is not supported');
+  });
+
+  it('accepts relayer-only fields in a shared CHAIN_CONFIGS payload', () => {
+    const overrides = parseChainConfigOverrides(JSON.stringify([{
+      chainId: 42161,
+      vaultAddress: '0x949556cb8634F9a4a8504665C3d0D9d326c600b2',
+      graphUrl: '',
+      rpcUrls: ['https://primary.example/rpc'],
+      startBlock: 123,
+      scanBlockBatchSize: 200,
+    }]));
+
+    expect(mergeChainConfigs(overrides)[0].rpcUrl)
+      .toBe('https://arbitrum-one-rpc.publicnode.com');
+  });
+
   it('uses the built-in Arbitrum One RPC when an override omits rpcUrl', () => {
     const chains = mergeChainConfigs([
       {

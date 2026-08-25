@@ -1,106 +1,90 @@
-# Architecture
+# Admin Web Architecture
 
-## Tech Stack
+## Runtime boundary
 
-- Vite 5 + React 18 + TypeScript
-- Ant Design 5 (dark theme, custom tokens)
-- React Router v6 (routing)
-- TanStack Query v5 (server state / caching)
-- Zustand (global state: chain selection, auth)
-- graphql-request (Graph queries)
-- viem (ERC20 contract calls for token metadata)
+The production validator image serves the React SPA, Fastify validator API, relayer read proxy,
+RPC proxy, and Admin write forwarder on one origin behind Nginx Basic Auth. The browser never
+receives upstream credentials and does not call relayer/RPC origins directly.
 
-## Data Sources
+Current stack versions come from `web/package.json`: React 19, React Router 7, Ant Design 6,
+TanStack Query 5, Zustand 5, Vite 8, TypeScript 6, viem 2, and graphql-request 7.
 
-### Admin API (global relayer endpoint)
-- The admin web calls one configured relayer endpoint. Chain context stays in the path
-  and request payloads.
-- Cookie-based auth (`admin_session`, `credentials: 'include'`)
-- Response envelope: `{ code: 0, msg: "success", data: {} }`, always HTTP 200
-- Dev: Vite proxy routes `/api/chain/{chainId}/...` to relayer
-- Public deposits / withdrawals return human-readable decimal `amount`
-  and `fee` strings from the relayer. Do not pass those fields through
-  `formatUnits` again; only Graph and direct on-chain reads use raw base
-  units.
+## Routes and authentication
 
-### The Graph (per-chain subgraph)
-- Entities: Token, Validator, Withdrawal
-- Authenticated via API key in URL
+- Nginx protects the SPA root and `/admin/*` with Basic Auth (`admin` plus
+  `ADMIN_BASIC_AUTH_PASSWORD`).
+- Fastify independently verifies the same Basic Auth on `/admin/*` before KMS signing.
+- `/validator` exposes the current validator address.
+- `/api/chain/{chainId}/*` forwards only the allowlisted relayer read endpoints.
+- `/rpc/chain/{chainId}` forwards JSON-RPC to the selected chain RPC.
+- `/admin/sign-withdraw-operation` and `/admin/sign-rebalance-reject` sign and forward writes.
 
-### ERC20 RPC (per-chain)
-- Fetches token name, symbol, decimals at init via `rpcUrl`
-- Cached in TanStack Query for 5 minutes
-- Used for amount formatting (wei -> human readable) and token dropdowns
+There is no email login, 2FA, cookie session, application user table, or application role model.
+Network/IP restrictions may be added by deployment infrastructure but do not replace Basic Auth.
 
-### Vault RPC
-- Withdrawals only read vault basics needed for row actions, such as
-  `pendingWithdrawChallengePeriod`.
-- Rebalance initiation reads `rebalanceReceiver()` from the vault and
-  refuses to create a collection when it is the zero address. Configure
-  the receiver on-chain before using rebalance withdraw.
-- Overview also reads role holders from `RoleGranted` / `RoleRevoked`,
-  but starts at the built-in chain `startBlock` instead of block `0`.
-  On Arbitrum One this avoids oversized mainnet `eth_getLogs` requests.
-- If `graphUrl` is an empty string, Graph-backed token and validator
-  queries return empty lists instead of issuing an invalid GraphQL
-  request.
+## Chain configuration
 
-## Multi-Chain
+`CHAIN_CONFIGS` is injected into `window.__APP_CONFIG__` at container creation and merged with the
+built-in chain registry. Each item contains:
 
-Env var `CHAIN_CONFIGS` is a JSON array of per-chain deployment overrides:
 ```ts
-{ chainId, vaultAddress, graphUrl, rpcUrl }
+{
+  chainId,
+  vaultAddress,
+  graphUrl,
+  rpcUrl?,
+  relayerUrl?,
+  name?,
+  explorerUrl?
+}
 ```
 
-At startup the app merges those overrides with the built-in chain
-registry in `src/config/chain-registry.ts`. All API calls and Graph
-queries are namespaced by `chainId`. Chain selector in the header
-switches context.
+Built-in chains can inherit their RPC, name, and explorer. Custom chains require full metadata,
+RPC, and relayer URL. `vaultAddress` and `graphUrl` are always explicit deployment values.
+Unknown fields fail parsing. `relayerUrl` is the preferred per-chain route; legacy `RELAYER_URL`
+fills it only when omitted by the validator service or standalone Nginx renderer.
 
-## Project Structure
+The selected chain is encoded in the browser URL as `?chain=<chainId>`. Refresh, history
+navigation, sidebar navigation, and unknown-route redirects preserve it. A missing or invalid
+value selects Arbitrum One (`42161`) when configured, otherwise the first configured chain.
 
+## Data sources
+
+| Data | Source |
+| --- | --- |
+| Deposits / withdrawals | Selected relayer public APIs |
+| Vault roles | Selected relayer indexed Vault state |
+| Tokens | The Graph when `graphUrl` is non-empty; relayer fallback when empty |
+| Validator sets | The Graph when `graphUrl` is non-empty; relayer fallback when empty |
+| Paused flag, challenge period, rebalance receiver, required power | Live Vault RPC |
+| Token name, symbol, decimals | Live token RPC |
+| Rebalance collections | Selected relayer signature-collection APIs |
+
+A configured Graph URL that fails surfaces the error; runtime does not silently switch sources.
+Relayer fallback responses include `chainId` and `vaultAddress`, which the SPA verifies before
+using them.
+
+## Write lifecycle
+
+Flush, pause, unpause, execute, reset-hot-amount, and rebalance actions are signed by the local
+validator and forwarded to the selected relayer. The relayer validates the prepopulated signature,
+collects the remaining validator quorum, selects an operator, submits the Vault transaction, and
+waits for its receipt.
+
+Withdrawal rows enter loading immediately after confirmation. Loading covers the fresh-state
+precheck and the mined transaction response, then clears on success or failure. Relayer list
+refreshes run in the background and do not impose an artificial fixed-duration row lock.
+
+## Project structure
+
+```text
+src/config/             runtime chain registry
+src/api/admin/          relayer reads and Admin actions
+src/api/graph/          optional Graph token/validator queries
+src/api/local/          same-origin validator signing calls
+src/data/               Graph-versus-relayer source selection
+src/hooks/              TanStack Query live and indexed reads
+src/stores/             selected-chain state
+src/pages/              overview, deposits, withdrawals, rebalance
+src/utils/              formatting and action-state rules
 ```
-src/
-  config/chains.ts       - Chain config parser
-  api/client.ts          - Admin API fetch wrapper with envelope unwrap
-  api/admin/             - Auth, deposits, withdrawals, users API modules
-  api/graph/             - GraphQL client + queries
-  stores/                - Zustand stores (auth, chain)
-  hooks/
-    useGraphData.ts      - TanStack Query for Graph entities
-    useTokenMeta.ts      - ERC20 metadata fetcher (name, symbol, decimals)
-  utils/format.ts        - formatTokenAmount (wei->ether), shortenAddress
-  types/                 - TypeScript types
-  layouts/               - AuthLayout (centered dark card), DashboardLayout (sidebar + header)
-  pages/                 - Login, Overview, Deposits, Withdrawals, Users
-  components/
-    ChainSelector.tsx    - Chain dropdown in header
-    TokenSelect.tsx      - Token dropdown with name + address
-    AddressLink.tsx      - Shortened address with explorer link
-    StatusTag.tsx        - Colored status tags
-    RoleGuard.tsx        - Conditional render by role
-```
-
-## Auth Flow
-
-1. Email verification code -> cookie set
-2. 2FA setup (first time) or 2FA verify (returning)
-3. Session status: `pending_2fa_setup` | `pending_2fa_verify` | `active`
-4. DashboardLayout checks `/api/admin/auth/me` on mount
-
-## Roles
-
-- `viewer`: read deposits/withdrawals
-- `validator`: + withdraw actions (flush, pause, unpause, execute, reset hot amount)
-- `super_admin`: + user management
-
-## Batch Operations
-
-- **Withdraw row actions**:
-  - unexpired + unpaused: `Flush`, `Pause`
-  - unexpired + paused: `Unpause`
-  - expired + unpaused: `Execute`
-  - expired + paused: `Unpause`
-- **Flush**: Select individual unexpired unpaused withdrawals or use
-  the "Flush All Unexpired Unpaused" button
-- **Reset Hot Amount**: Select individual tokens or "Reset All" button on Overview page

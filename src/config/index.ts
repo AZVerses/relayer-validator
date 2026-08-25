@@ -34,6 +34,19 @@ const builtInRpcUrlsByChainId = new Map<number, string>([
   [11155111, 'https://ethereum-sepolia-rpc.publicnode.com'],
 ]);
 
+const SHARED_CHAIN_CONFIG_FIELDS = new Set([
+  'chainId',
+  'name',
+  'vaultAddress',
+  'graphUrl',
+  'explorerUrl',
+  'rpcUrl',
+  'rpcUrls',
+  'relayerUrl',
+  'startBlock',
+  'scanBlockBatchSize',
+]);
+
 function getBuiltInChainConfigs(): ChainRouteConfig[] {
   return [...builtInRpcUrlsByChainId.entries()].map(([chainId, rpcUrl]) => ({ chainId, rpcUrl }));
 }
@@ -111,6 +124,11 @@ function parseChainRouteConfigs(raw: string | undefined, legacyRelayerUrl?: stri
     }
 
     const record = item as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      if (!SHARED_CHAIN_CONFIG_FIELDS.has(key)) {
+        throw new Error(`CHAIN_CONFIGS[${index}].${key} is not supported`);
+      }
+    }
     if (!Number.isInteger(record.chainId) || Number(record.chainId) <= 0) {
       throw new Error(`CHAIN_CONFIGS[${index}].chainId must be a positive integer`);
     }

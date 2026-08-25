@@ -2,6 +2,19 @@ import type { ChainConfig, ChainConfigOverride } from '../types/chain'
 
 type BuiltInChainConfig = Omit<ChainConfig, 'graphUrl' | 'vaultAddress' | 'rpcUrl'> & { rpcUrl?: string }
 
+const CHAIN_CONFIG_FIELDS = new Set([
+  'chainId',
+  'name',
+  'vaultAddress',
+  'graphUrl',
+  'explorerUrl',
+  'rpcUrl',
+  'rpcUrls',
+  'relayerUrl',
+  'startBlock',
+  'scanBlockBatchSize',
+])
+
 const BUILT_IN_CHAINS: BuiltInChainConfig[] = [
   {
     name: 'Arbitrum One',
@@ -42,6 +55,11 @@ function assertChainConfigOverride(value: unknown, index: number): asserts value
   }
 
   const override = value as Record<string, unknown>
+  for (const key of Object.keys(override)) {
+    if (!CHAIN_CONFIG_FIELDS.has(key)) {
+      throw new Error(`CHAIN_CONFIGS[${index}].${key} is not supported`)
+    }
+  }
   if (!Number.isInteger(override.chainId) || Number(override.chainId) <= 0) {
     throw new Error(`CHAIN_CONFIGS[${index}].chainId must be a positive integer`)
   }
