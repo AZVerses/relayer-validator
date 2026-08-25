@@ -10,7 +10,6 @@ const BUILT_IN_CHAINS: BuiltInChainConfig[] = [
     validatorServiceUrl: 'http://localhost:3001',
     explorerUrl: 'https://arbiscan.io',
     rpcUrl: 'https://arbitrum-one-rpc.publicnode.com',
-    startBlock: 476067900,
   },
   {
     name: 'Arbitrum Sepolia',
@@ -19,7 +18,6 @@ const BUILT_IN_CHAINS: BuiltInChainConfig[] = [
     validatorServiceUrl: 'http://localhost:3001',
     explorerUrl: 'https://sepolia.arbiscan.io',
     rpcUrl: 'https://arbitrum-sepolia-rpc.publicnode.com',
-    startBlock: 266286051,
   },
   {
     name: 'Ethereum Sepolia',
@@ -28,7 +26,6 @@ const BUILT_IN_CHAINS: BuiltInChainConfig[] = [
     validatorServiceUrl: 'http://localhost:3001',
     explorerUrl: 'https://sepolia.etherscan.io',
     rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
-    startBlock: 0,
   },
 ]
 
@@ -36,13 +33,6 @@ function assertOptionalString(override: Record<string, unknown>, key: keyof Chai
   const value = override[key]
   if (value !== undefined && typeof value !== 'string') {
     throw new Error(`CHAIN_CONFIGS[${index}].${key} must be a string`)
-  }
-}
-
-function assertOptionalPositiveInteger(override: Record<string, unknown>, key: keyof ChainConfigOverride, index: number): void {
-  const value = override[key]
-  if (value !== undefined && (!Number.isInteger(value) || Number(value) < 0)) {
-    throw new Error(`CHAIN_CONFIGS[${index}].${key} must be a non-negative integer`)
   }
 }
 
@@ -64,7 +54,6 @@ function assertChainConfigOverride(value: unknown, index: number): asserts value
   for (const key of ['name', 'explorerUrl', 'rpcUrl', 'relayerUrl'] as const) {
     assertOptionalString(override, key, index)
   }
-  assertOptionalPositiveInteger(override, 'startBlock', index)
 }
 
 export function normalizeChainConfigOverrides(value: unknown): ChainConfigOverride[] {
@@ -91,7 +80,7 @@ export function mergeChainConfigs(overrides: ChainConfigOverride[]): ChainConfig
   return overrides.map((override) => {
     const base = baseByChainId.get(override.chainId)
     if (!base && !hasFullChainConfigOverride(override)) {
-      throw new Error(`CHAIN_CONFIGS contains unsupported chainId ${override.chainId}; provide name, explorerUrl, rpcUrl, relayerUrl, and startBlock to add a custom chain`)
+      throw new Error(`CHAIN_CONFIGS contains unsupported chainId ${override.chainId}; provide name, explorerUrl, rpcUrl, and relayerUrl to add a custom chain`)
     }
     if (!override.rpcUrl && !base?.rpcUrl) {
       throw new Error(`CHAIN_CONFIGS requires rpcUrl for chainId ${override.chainId}`)
@@ -105,14 +94,12 @@ export function mergeChainConfigs(overrides: ChainConfigOverride[]): ChainConfig
         validatorServiceUrl: 'http://localhost:3001',
         explorerUrl: override.explorerUrl!,
         rpcUrl: override.rpcUrl!,
-        startBlock: override.startBlock!,
       }),
       name: override.name ?? base?.name ?? override.name!,
       relayerUrl: override.relayerUrl ?? base?.relayerUrl ?? override.relayerUrl!,
       validatorServiceUrl: base?.validatorServiceUrl ?? 'http://localhost:3001',
       explorerUrl: override.explorerUrl ?? base?.explorerUrl ?? override.explorerUrl!,
       rpcUrl: override.rpcUrl ?? base!.rpcUrl!,
-      startBlock: override.startBlock ?? base?.startBlock ?? override.startBlock!,
       graphUrl: override.graphUrl,
       vaultAddress: override.vaultAddress,
     }
@@ -124,7 +111,6 @@ function hasFullChainConfigOverride(override: ChainConfigOverride): boolean {
     override.name &&
     override.explorerUrl &&
     override.rpcUrl &&
-    override.relayerUrl &&
-    override.startBlock !== undefined,
+    override.relayerUrl,
   )
 }

@@ -10,7 +10,6 @@ export interface ChainConfig {
   graphUrl: string
   explorerUrl: string
   rpcUrl: string
-  startBlock: number
   vaultAddress: string
 }
 
@@ -22,5 +21,4 @@ export interface ChainConfigOverride {
   explorerUrl?: string
   rpcUrl?: string
   relayerUrl?: string
-  startBlock?: number
 }

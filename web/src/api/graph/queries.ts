@@ -16,6 +16,7 @@ export interface GraphValidator {
   chainId: string
   power: string
   validatorSetHash: string
+  requiredPower?: string
 }
 
 export const GET_TOKENS = gql`

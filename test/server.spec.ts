@@ -342,6 +342,19 @@ describe('validator HTTP API', () => {
         authorization: null,
       });
 
+      for (const path of ['/api/public/vault-roles', '/api/public/validator-sets']) {
+        const vaultStateResponse = await app.inject({
+          method: 'GET',
+          url: `/api/chain/421614${path}`,
+        });
+        expect(vaultStateResponse.statusCode).toBe(200);
+        expect(vaultStateResponse.json()).toMatchObject({
+          relayer: 'b',
+          method: 'GET',
+          url: path,
+        });
+      }
+
       const disallowedPathResponse = await app.inject({
         method: 'GET',
         url: '/api/chain/421614/api/admin/auth/me',

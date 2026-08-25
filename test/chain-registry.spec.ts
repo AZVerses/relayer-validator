@@ -22,7 +22,6 @@ describe('admin web chain registry', () => {
         graphUrl: 'https://graph.example.com/subgraphs/name/az-vault',
         explorerUrl: 'https://arbiscan.io',
         rpcUrl: 'https://arb.example.com/rpc',
-        startBlock: 476067900,
         vaultAddress: '0x949556cb8634F9a4a8504665C3d0D9d326c600b2',
       },
     ]);
@@ -70,7 +69,6 @@ describe('admin web chain registry', () => {
         explorerUrl: 'https://hashkey.blockscout.com',
         rpcUrl: 'https://mainnet.hsk.xyz',
         relayerUrl: 'https://hashkey-relayer.example.com',
-        startBlock: 123456,
       },
     ]);
 
@@ -78,7 +76,6 @@ describe('admin web chain registry', () => {
       chainId: 177,
       relayerUrl: 'https://hashkey-relayer.example.com',
       rpcUrl: 'https://mainnet.hsk.xyz',
-      startBlock: 123456,
     });
   });
 

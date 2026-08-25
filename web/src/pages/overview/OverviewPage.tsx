@@ -51,10 +51,10 @@ function FastLaneBar({ used, hardCap, meta }: { used: string; hardCap: bigint; m
 }
 
 function ValidatorSetCard({ set, validatorColumns }: {
-  set: { hash: string; index: number; members: GraphValidator[]; totalPower: number }
+  set: { hash: string; index: number; members: GraphValidator[]; totalPower: number; requiredPower?: string }
   validatorColumns: object[]
 }) {
-  const { data: requiredPower, isLoading } = useRequiredPower(set.hash)
+  const { data: requiredPower, isLoading } = useRequiredPower(set.hash, set.requiredPower)
 
   return (
     <Card
@@ -118,6 +118,7 @@ export function OverviewPage() {
       index: idx + 1,
       members,
       totalPower: members.reduce((sum, v) => sum + Number(v.power), 0),
+      requiredPower: members[0]?.requiredPower,
     }))
   }, [validators])
 
