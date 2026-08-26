@@ -76,10 +76,9 @@ Notes:
   endpoint different from the built-in RPC.
 - For local `npm run dev` in `web/`, set `CHAIN_CONFIGS` in `web/.env.local` or `web/.env.development`.
 - If neither `window.__APP_CONFIG__.CHAIN_CONFIGS` nor `CHAIN_CONFIGS` is set, the SPA throws at startup instead of silently using a hard-coded vault address.
-- Built-in chain metadata such as RPC proxy defaults, explorer URL, and
-  event scan `startBlock` stays in `web/src/config/chain-registry.ts`.
-  Arbitrum One role-event reads start at block `476067900`, not block
-  `0`, to avoid oversized mainnet RPC log scans.
+- Validator and Admin Web do not scan historical chain events and do not consume `startBlock`.
+  The field is accepted only so deployments can share one `CHAIN_CONFIGS` payload with the
+  relayer, which owns chain-log ingestion and its scan starting block.
 
 ## Reference: how the env vars flow into the running container
 
